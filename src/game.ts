@@ -17,4 +17,26 @@ export const PLACES: Place[] = [
 export function distanceKm(a:Point,b:Point):number {const rad=Math.PI/180;const dlat=(b.lat-a.lat)*rad;const dlng=(b.lng-a.lng)*rad;const h=Math.sin(dlat/2)**2+Math.cos(a.lat*rad)*Math.cos(b.lat*rad)*Math.sin(dlng/2)**2;return 6371.0088*2*Math.asin(Math.sqrt(Math.min(1,Math.max(0,h))));}
 export function score(km:number):number {if(!Number.isFinite(km)||km<0)throw new Error('Distancia inválida');return Math.round(5000*Math.exp(-km/500));}
 export function pickRounds(random:()=>number=Math.random):Place[] {const pool=[...PLACES];for(let i=pool.length-1;i>0;i--){const j=Math.floor(random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]];}return pool.slice(0,5);}
-export class Game { rounds=pickRounds(); index=0; guess:Point|null=null; target:Point|null=null; results:{name:string;distance:number;points:number}[]=[];get finished(){return this.results.length===5;} get total(){return this.results.reduce((s,r)=>s+r.points,0);}get revealed(){return this.results.length>this.index;}submit(){if(!this.guess||!this.target||this.revealed||this.finished)return;const distance=distanceKm(this.target,this.guess);this.results.push({name:this.rounds[this.index].name,distance,points:score(distance)});}next(){if(!this.revealed||this.finished)return;this.index++;this.guess=null;this.target=null;}}
+export interface RoundResult { name: string; distance: number | null; points: number; timedOut: boolean }
+export const ROUND_DURATION_MS = 120_000;
+export class Game {
+ rounds=pickRounds(); index=0; guess:Point|null=null; target:Point|null=null;
+ results:RoundResult[]=[];
+ deadline:number|null=null;
+ get finished(){return this.results.length===5;}
+ get total(){return this.results.reduce((s,r)=>s+r.points,0);}
+ get revealed(){return this.results.length>this.index;}
+ startTimer(now=Date.now()){if(this.target&&!this.revealed&&!this.finished&&this.deadline===null)this.deadline=now+ROUND_DURATION_MS;}
+ remainingSeconds(now=Date.now()){return this.deadline===null?120:Math.max(0,Math.ceil((this.deadline-now)/1000));}
+ expire(now=Date.now()){
+  if(this.deadline===null||now<this.deadline||!this.target||this.revealed||this.finished)return false;
+  this.results.push({name:this.rounds[this.index].name,distance:this.guess?distanceKm(this.target,this.guess):null,points:0,timedOut:true});
+  return true;
+ }
+ submit(now=Date.now()){
+  if(this.expire(now)||!this.guess||!this.target||this.revealed||this.finished)return;
+  const distance=distanceKm(this.target,this.guess);
+  this.results.push({name:this.rounds[this.index].name,distance,points:score(distance),timedOut:false});
+ }
+ next(){if(!this.revealed||this.finished)return;this.index++;this.guess=null;this.target=null;this.deadline=null;}
+}

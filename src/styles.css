@@ -19,3 +19,16 @@
 @media(max-width:900px){.playing .result{top:140px;bottom:auto;width:calc(100vw - 40px);padding:14px}.playing .result h2{font-size:18px}.playing .result strong{font-size:24px}.playing .result p{font-size:11px}}
 @media(max-width:550px){.playing .gamehud{left:12px;right:12px;top:12px;gap:8px}.playing .gamehud span,.playing .gamehud button{padding:10px;font-size:10px}.playing .viewfooter{left:12px;top:62px;font-size:10px;padding:5px 10px}.playing .mapcard{right:12px;bottom:42px;width:230px;height:210px}.playing .mapcard.expanded{width:calc(100vw - 24px);height:min(440px,calc(100dvh - 260px))}.playing .practice{padding-bottom:240px}.playing .practice h2{font-size:21px}.playing .compass{display:none}.playing .result{left:12px;width:calc(100vw - 24px);top:112px;gap:9px}.playing .result button{padding:9px;font-size:12px}}
 @media(prefers-reduced-motion:reduce){.playing .mapcard{transition:none}}
+.home{min-height:calc(100dvh - 200px);max-width:760px;margin:auto;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:40px 0}
+.home-compass{width:105px;height:105px;border-radius:50%;display:grid;place-items:center;font-size:65px;color:#156d70;background:#e1ece5;border:1px solid #ccddd2;margin-bottom:22px}
+.home h1{font-size:clamp(38px,7vw,68px);letter-spacing:-2.5px;margin:10px 0}
+.home-description{font-size:18px;color:#63776e;max-width:460px;margin:12px 0 24px}
+.home-rules{display:flex;justify-content:center;flex-wrap:wrap;gap:10px}
+.home-rules span{border:1px solid #d5e1d9;background:#fff;border-radius:30px;padding:9px 15px;font-size:12px;color:#45665d}
+.home .start{min-width:220px;font-size:18px;padding:17px 30px;margin-top:30px}
+.home-note{max-width:420px;font-size:12px;color:#718177;margin-top:20px}
+.map-timer{display:inline-block;margin-left:10px;font-variant-numeric:tabular-nums;color:#156d70}
+.timer{font-variant-numeric:tabular-nums;white-space:nowrap}
+.playing .gamehud .timer{font-size:22px;min-width:95px;text-align:center}
+.urgent,.playing .gamehud .timer.urgent{color:#a33c22;background:#fff0e1}
+@media(max-width:550px){.home{padding:20px 0}.home-description{font-size:16px}.playing .gamehud{flex-wrap:wrap}.playing .gamehud .timer{font-size:16px;min-width:70px}.playing .gamehud button{margin-left:auto}}
