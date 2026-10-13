@@ -1,7 +1,8 @@
 import {bootstrapApplication} from '@angular/platform-browser';
 import {Component,OnDestroy,NgZone,ChangeDetectorRef,signal} from '@angular/core';
 import * as L from 'leaflet';
-import {Game,Point} from './game';
+import {Game,Point,PLACES} from './game';
+import {findNavigablePanorama} from './street-view';
 import {GOOGLE_MAPS_API_KEY} from './google-maps-config';
 @Component({selector:'app-root',standalone:true,template:`
 <header><a class="brand" href="/">◈ <span>rumbo<span class="dot">.</span></span></a><span class="country">ARGENTINA <span>🇦🇷</span></span></header>
@@ -47,7 +48,29 @@ class App implements OnDestroy {
  leave(){this.playing.set(false);document.body.style.overflow='';}
  async connect(key:string){if(this.busy()||this.connected())return;this.authFailed=false;this.busy.set(true);this.error.set('');try{await this.loadGoogle(key);if(this.authFailed)throw new Error('auth');if(this.destroyed)return;this.service=new google.maps.StreetViewService();this.panorama=new google.maps.StreetViewPanorama(document.getElementById('panorama')!,{addressControl:false,showRoadLabels:false,linksControl:true,fullscreenControl:false,enableCloseButton:false,motionTracking:false});this.connected.set(true);this.game=new Game();this.clear();await this.loadRound();if(this.connected())this.begin();}catch{this.error.set(this.authFailed?'Google rechazó la clave. Revisá Maps JavaScript API, facturación y dominios autorizados.':'No se pudo iniciar Google Maps. Revisá GOOGLE_MAPS_API_KEY, las restricciones de la clave, la facturación y tu conexión.');this.stopTimer();this.connected.set(false);this.game.target=null;}finally{this.busy.set(false);}}
  private loadGoogle(key:string):Promise<void>{if(window.google?.maps)return Promise.resolve();return new Promise((resolve,reject)=>{let settled=false;const finish=(err?:Error)=>{if(settled)return;settled=true;clearTimeout(timer);delete (window as any).__rumboMaps;if(err){this.script?.remove();reject(err);}else resolve();};const timer=setTimeout(()=>finish(new Error('timeout')),20000);(window as any).__rumboMaps=()=>finish();(window as any).gm_authFailure=()=>this.zone.run(()=>{this.authFailed=true;this.stopTimer();this.connected.set(false);this.game.target=null;this.busy.set(false);this.leave();finish(new Error('auth'));if(settled)this.error.set('Google rechazó la clave. Revisá Maps JavaScript API, facturación y dominios autorizados.');});this.script=document.createElement('script');this.script.src='https://maps.googleapis.com/maps/api/js?key='+encodeURIComponent(key)+'&callback=__rumboMaps&loading=async&v=quarterly&language=es&region=AR';this.script.onerror=()=>finish(new Error('network'));document.head.appendChild(this.script);});}
- async loadRound(){this.stopTimer();this.remaining.set(120);const id=++this.request;this.busy.set(true);this.error.set('');this.game.target=null;const place=this.game.rounds[this.game.index];try{const {data}=await this.service!.getPanorama({location:place,radius:1000,source:google.maps.StreetViewSource.OUTDOOR,preference:google.maps.StreetViewPreference.NEAREST});if(id!==this.request||this.destroyed)return;if(!data.location?.latLng||!data.location.pano)throw new Error('Sin panorama');this.game.target={lat:data.location.latLng.lat(),lng:data.location.latLng.lng()};this.startPano=data.location.pano;this.panorama!.setPano(this.startPano);this.panorama!.setPov({heading:Math.random()*360,pitch:0});this.panorama!.setVisible(true);this.startTimer();}catch{this.error.set('No se encontró un panorama Street View para esta ronda. Revisá la cobertura de Street View y la configuración de la clave.');this.panorama?.setVisible(false);this.connected.set(false);this.game.target=null;this.leave();}finally{if(id===this.request)this.busy.set(false);}}
+ async loadRound(){
+  this.stopTimer();this.remaining.set(120);
+  const id=++this.request;
+  const isCurrent=()=>id===this.request&&!this.destroyed&&!this.authFailed;
+  this.busy.set(true);this.error.set('');this.game.target=null;
+  const place=this.game.rounds[this.game.index];
+  const reserved=new Set(this.game.rounds.map(round=>round.name));
+  const alternatives=PLACES.filter(candidate=>!reserved.has(candidate.name));
+  try{
+   const found=await findNavigablePanorama(request=>this.service!.getPanorama(request),[place,...alternatives],isCurrent);
+   if(!isCurrent())return;
+   if(!found)throw new Error('Sin panorama navegable');
+   this.game.rounds[this.game.index]=found.place;
+   this.game.target=found.target;this.startPano=found.pano;
+   this.panorama!.setPano(this.startPano);
+   this.panorama!.setPov({heading:Math.random()*360,pitch:0});
+   this.panorama!.setVisible(true);this.startTimer();
+  }catch{
+   if(!isCurrent())return;
+   this.error.set('No se pudo cargar un Street View navegable. Revisá la cobertura, la clave de Google Maps y tu conexión, y volvé a intentar.');
+   this.panorama?.setVisible(false);this.connected.set(false);this.game.target=null;this.leave();
+  }finally{if(id===this.request)this.busy.set(false);}
+ }
  resetView(){if(this.startPano)this.panorama?.setPano(this.startPano);}
  draw(){this.pins.clearLayers();if(this.game.guess)L.circleMarker(this.game.guess,{radius:8,color:'#fff',weight:3,fillColor:'#126e72',fillOpacity:1}).bindTooltip('Tu apuesta').addTo(this.pins);if(this.game.revealed&&this.game.target){L.circleMarker(this.game.target,{radius:8,color:'#fff',weight:3,fillColor:'#ea9049',fillOpacity:1}).bindTooltip('Ubicación real').addTo(this.pins);if(this.game.guess){L.polyline([this.game.guess,this.game.target],{color:'#ea9049',dashArray:'7,7'}).addTo(this.pins);this.map.fitBounds(L.latLngBounds([this.game.guess,this.game.target]),{padding:[35,35],maxZoom:14});}else this.map.setView(this.game.target,12);}}
  submit(){if(!this.connected()||this.busy())return;if(this.checkTime())return;this.game.submit();if(this.game.revealed)this.finishRound();}
