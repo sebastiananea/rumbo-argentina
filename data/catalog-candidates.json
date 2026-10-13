@@ -1,0 +1,410 @@
+[
+  {
+    "seed_slug": "hurlingham",
+    "name": "Hurlingham",
+    "region": "Buenos Aires",
+    "kind": "city",
+    "lat": -34.589,
+    "lng": -58.639
+  },
+  {
+    "seed_slug": "moron",
+    "name": "Morón",
+    "region": "Buenos Aires",
+    "kind": "city",
+    "lat": -34.651,
+    "lng": -58.621
+  },
+  {
+    "seed_slug": "san-isidro",
+    "name": "San Isidro",
+    "region": "Buenos Aires",
+    "kind": "city",
+    "lat": -34.47,
+    "lng": -58.512
+  },
+  {
+    "seed_slug": "tigre",
+    "name": "Tigre",
+    "region": "Buenos Aires",
+    "kind": "city",
+    "lat": -34.425,
+    "lng": -58.579
+  },
+  {
+    "seed_slug": "caba-caballito",
+    "name": "Caballito · CABA",
+    "region": "CABA",
+    "kind": "city",
+    "lat": -34.619,
+    "lng": -58.442
+  },
+  {
+    "seed_slug": "caba-la-boca",
+    "name": "La Boca · CABA",
+    "region": "CABA",
+    "kind": "city",
+    "lat": -34.634,
+    "lng": -58.363
+  },
+  {
+    "seed_slug": "san-antonio-areco",
+    "name": "San Antonio de Areco",
+    "region": "Buenos Aires",
+    "kind": "town",
+    "lat": -34.25,
+    "lng": -59.47
+  },
+  {
+    "seed_slug": "tandil",
+    "name": "Tandil",
+    "region": "Buenos Aires",
+    "kind": "city",
+    "lat": -37.328,
+    "lng": -59.137
+  },
+  {
+    "seed_slug": "sierra-ventana",
+    "name": "Sierra de la Ventana",
+    "region": "Buenos Aires",
+    "kind": "town",
+    "lat": -38.138,
+    "lng": -61.794
+  },
+  {
+    "seed_slug": "rn3-las-flores",
+    "name": "Ruta 3 · Las Flores",
+    "region": "Buenos Aires",
+    "kind": "road",
+    "lat": -36.017,
+    "lng": -59.109
+  },
+  {
+    "seed_slug": "cordoba-centro",
+    "name": "Córdoba",
+    "region": "Córdoba",
+    "kind": "city",
+    "lat": -31.417,
+    "lng": -64.183
+  },
+  {
+    "seed_slug": "villa-general-belgrano",
+    "name": "Villa General Belgrano",
+    "region": "Córdoba",
+    "kind": "town",
+    "lat": -31.979,
+    "lng": -64.559
+  },
+  {
+    "seed_slug": "mina-clavero",
+    "name": "Mina Clavero",
+    "region": "Córdoba",
+    "kind": "town",
+    "lat": -31.729,
+    "lng": -65.004
+  },
+  {
+    "seed_slug": "la-cumbrecita",
+    "name": "La Cumbrecita",
+    "region": "Córdoba",
+    "kind": "town",
+    "lat": -31.899,
+    "lng": -64.773
+  },
+  {
+    "seed_slug": "rp5-calamuchita",
+    "name": "Ruta 5 · Calamuchita",
+    "region": "Córdoba",
+    "kind": "road",
+    "lat": -32.051,
+    "lng": -64.54
+  },
+  {
+    "seed_slug": "rosario",
+    "name": "Rosario",
+    "region": "Santa Fe",
+    "kind": "city",
+    "lat": -32.947,
+    "lng": -60.63
+  },
+  {
+    "seed_slug": "esperanza",
+    "name": "Esperanza",
+    "region": "Santa Fe",
+    "kind": "town",
+    "lat": -31.449,
+    "lng": -60.931
+  },
+  {
+    "seed_slug": "parana",
+    "name": "Paraná",
+    "region": "Entre Ríos",
+    "kind": "city",
+    "lat": -31.732,
+    "lng": -60.529
+  },
+  {
+    "seed_slug": "colon",
+    "name": "Colón",
+    "region": "Entre Ríos",
+    "kind": "town",
+    "lat": -32.223,
+    "lng": -58.143
+  },
+  {
+    "seed_slug": "goya",
+    "name": "Goya",
+    "region": "Corrientes",
+    "kind": "town",
+    "lat": -29.14,
+    "lng": -59.262
+  },
+  {
+    "seed_slug": "posadas",
+    "name": "Posadas",
+    "region": "Misiones",
+    "kind": "city",
+    "lat": -27.367,
+    "lng": -55.896
+  },
+  {
+    "seed_slug": "puerto-iguazu",
+    "name": "Puerto Iguazú",
+    "region": "Misiones",
+    "kind": "town",
+    "lat": -25.598,
+    "lng": -54.575
+  },
+  {
+    "seed_slug": "resistencia",
+    "name": "Resistencia",
+    "region": "Chaco",
+    "kind": "city",
+    "lat": -27.452,
+    "lng": -58.986
+  },
+  {
+    "seed_slug": "formosa",
+    "name": "Formosa",
+    "region": "Formosa",
+    "kind": "city",
+    "lat": -26.178,
+    "lng": -58.177
+  },
+  {
+    "seed_slug": "salta",
+    "name": "Salta",
+    "region": "Salta",
+    "kind": "city",
+    "lat": -24.789,
+    "lng": -65.41
+  },
+  {
+    "seed_slug": "cafayate",
+    "name": "Cafayate",
+    "region": "Salta",
+    "kind": "town",
+    "lat": -26.073,
+    "lng": -65.977
+  },
+  {
+    "seed_slug": "cachi",
+    "name": "Cachi",
+    "region": "Salta",
+    "kind": "town",
+    "lat": -25.12,
+    "lng": -66.162
+  },
+  {
+    "seed_slug": "tilcara",
+    "name": "Tilcara",
+    "region": "Jujuy",
+    "kind": "town",
+    "lat": -23.578,
+    "lng": -65.395
+  },
+  {
+    "seed_slug": "humahuaca",
+    "name": "Humahuaca",
+    "region": "Jujuy",
+    "kind": "town",
+    "lat": -23.205,
+    "lng": -65.35
+  },
+  {
+    "seed_slug": "rn9-purmamarca",
+    "name": "Ruta 9 · Quebrada de Humahuaca",
+    "region": "Jujuy",
+    "kind": "road",
+    "lat": -23.722,
+    "lng": -65.463
+  },
+  {
+    "seed_slug": "tucuman",
+    "name": "San Miguel de Tucumán",
+    "region": "Tucumán",
+    "kind": "city",
+    "lat": -26.831,
+    "lng": -65.204
+  },
+  {
+    "seed_slug": "tafi-valle",
+    "name": "Tafí del Valle",
+    "region": "Tucumán",
+    "kind": "town",
+    "lat": -26.853,
+    "lng": -65.71
+  },
+  {
+    "seed_slug": "santiago-estero",
+    "name": "Santiago del Estero",
+    "region": "Santiago del Estero",
+    "kind": "city",
+    "lat": -27.784,
+    "lng": -64.267
+  },
+  {
+    "seed_slug": "catamarca",
+    "name": "San Fernando del Valle de Catamarca",
+    "region": "Catamarca",
+    "kind": "city",
+    "lat": -28.469,
+    "lng": -65.779
+  },
+  {
+    "seed_slug": "la-rioja",
+    "name": "La Rioja",
+    "region": "La Rioja",
+    "kind": "city",
+    "lat": -29.413,
+    "lng": -66.856
+  },
+  {
+    "seed_slug": "mendoza",
+    "name": "Mendoza",
+    "region": "Mendoza",
+    "kind": "city",
+    "lat": -32.89,
+    "lng": -68.846
+  },
+  {
+    "seed_slug": "uspallata",
+    "name": "Uspallata",
+    "region": "Mendoza",
+    "kind": "town",
+    "lat": -32.592,
+    "lng": -69.347
+  },
+  {
+    "seed_slug": "san-juan",
+    "name": "San Juan",
+    "region": "San Juan",
+    "kind": "city",
+    "lat": -31.538,
+    "lng": -68.536
+  },
+  {
+    "seed_slug": "merlo",
+    "name": "Merlo",
+    "region": "San Luis",
+    "kind": "town",
+    "lat": -32.343,
+    "lng": -65.014
+  },
+  {
+    "seed_slug": "santa-rosa",
+    "name": "Santa Rosa",
+    "region": "La Pampa",
+    "kind": "city",
+    "lat": -36.62,
+    "lng": -64.291
+  },
+  {
+    "seed_slug": "neuquen",
+    "name": "Neuquén",
+    "region": "Neuquén",
+    "kind": "city",
+    "lat": -38.951,
+    "lng": -68.06
+  },
+  {
+    "seed_slug": "san-martin-andes",
+    "name": "San Martín de los Andes",
+    "region": "Neuquén",
+    "kind": "town",
+    "lat": -40.157,
+    "lng": -71.353
+  },
+  {
+    "seed_slug": "rn40-junin",
+    "name": "Ruta 40 · Junín de los Andes",
+    "region": "Neuquén",
+    "kind": "road",
+    "lat": -39.958,
+    "lng": -71.086
+  },
+  {
+    "seed_slug": "bariloche",
+    "name": "Bariloche",
+    "region": "Río Negro",
+    "kind": "city",
+    "lat": -41.133,
+    "lng": -71.31
+  },
+  {
+    "seed_slug": "el-bolson",
+    "name": "El Bolsón",
+    "region": "Río Negro",
+    "kind": "town",
+    "lat": -41.965,
+    "lng": -71.534
+  },
+  {
+    "seed_slug": "puerto-madryn",
+    "name": "Puerto Madryn",
+    "region": "Chubut",
+    "kind": "city",
+    "lat": -42.769,
+    "lng": -65.039
+  },
+  {
+    "seed_slug": "esquel",
+    "name": "Esquel",
+    "region": "Chubut",
+    "kind": "town",
+    "lat": -42.914,
+    "lng": -71.319
+  },
+  {
+    "seed_slug": "el-calafate",
+    "name": "El Calafate",
+    "region": "Santa Cruz",
+    "kind": "town",
+    "lat": -50.337,
+    "lng": -72.264
+  },
+  {
+    "seed_slug": "rio-gallegos",
+    "name": "Río Gallegos",
+    "region": "Santa Cruz",
+    "kind": "city",
+    "lat": -51.623,
+    "lng": -69.216
+  },
+  {
+    "seed_slug": "ushuaia",
+    "name": "Ushuaia",
+    "region": "Tierra del Fuego",
+    "kind": "city",
+    "lat": -54.806,
+    "lng": -68.303
+  },
+  {
+    "seed_slug": "tolhuin",
+    "name": "Tolhuin",
+    "region": "Tierra del Fuego",
+    "kind": "town",
+    "lat": -54.511,
+    "lng": -67.196
+  }
+]

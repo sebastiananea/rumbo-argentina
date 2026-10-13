@@ -1,8 +1,11 @@
 # Rumbo · GeoGuessr Argentina
-MVP single player con Angular 22, TypeScript y Leaflet. Pantalla de inicio, cinco rondas de dos minutos, selección de ubicación, resultados y resumen final responsive. Sin backend ni multijugador.
+MVP single player con Angular 22, TypeScript y Leaflet. Pantalla de inicio, cinco rondas de dos minutos, selección de ubicación, resultados y resumen final responsive. Backend opcional con Supabase para cuentas, catálogo e historial privado. Sin multijugador ni suscripciones.
 
 ## Ejecutar
 Node 24.15 o superior (24.x). `npm ci`, `npm start`. Producción: `npm run build`. Pruebas: `npm test`.
+
+## Cuentas, catálogo e historial
+La integración incluye registro, ingreso, recuperación de contraseña, catálogo validable e historial privado. Para activarla hace falta crear un proyecto propio de Supabase y configurar sus variables públicas en Vercel. Seguir [la guía del backend](docs/backend.md), que incluye las migraciones, el administrador de catálogo, la importación de nuevos puntos y la verificación real. Sin Supabase, el juego continúa como invitado y no guarda partidas.
 
 ## Cómo jugar
 La pantalla de inicio muestra las reglas y el botón **Jugar**. El mapa y Street View se inicializan recién al pulsarlo. Cada ronda dispone de **2 minutos**, contados desde que se obtiene el panorama, sin descontar el tiempo de carga. Hay que marcar y confirmar una ubicación antes del límite: si se agota el tiempo, la ronda termina con **0 puntos**, incluso si había una apuesta marcada sin confirmar. El reloj sigue corriendo al salir de la vista de juego o cambiar de pestaña. Se puede avanzar a la siguiente ronda o volver a jugar después del resumen final.
@@ -12,12 +15,12 @@ En Google Cloud habilitar **Maps JavaScript API** y facturación. Crear una clav
 
 La clave se incorpora al JavaScript que recibe el navegador: una variable de entorno evita guardarla en el repositorio, pero no la hace secreta. Restringirla en Google Cloud a **Maps JavaScript API** y a HTTP referrers del dominio publicado (`https://DOMINIO/*`) y desarrollo (`http://localhost:4200/*`); configurar cuotas y alertas de facturación. Google puede cobrar por uso. Si falta la variable o falla la autenticación, la aplicación muestra un error y no inicia Street View. No se necesita una clave para el mapa OpenStreetMap.
 
-Se eligen 5 destinos sin repetir de 12 ciudades argentinas. StreetViewService busca imágenes exteriores oficiales de Google y acepta únicamente panoramas con conexiones a otras ubicaciones. Si el panorama más cercano está aislado, prueba cuatro calles cercanas; si ninguna sirve, reemplaza el destino por una ciudad que no esté incluida en las otras rondas. La búsqueda está limitada a cinco consultas por destino. El reloj comienza solamente al encontrar un panorama navegable, y la distancia se calcula contra las coordenadas **reales del panorama inicial**, aunque el jugador se desplace. Se ocultan direcciones y nombres de calles. Las atribuciones de Google y OSM se mantienen.
+Con Supabase, se sortean cinco ubicaciones del catálogo activo, priorizando puntos no jugados y variedad de provincias y entornos. Sin catálogo conectado, el modo invitado conserva el catálogo inicial de 12 ciudades. StreetViewService busca imágenes exteriores oficiales de Google y acepta únicamente panoramas con conexiones a otras ubicaciones. Si el panorama más cercano está aislado, prueba cuatro calles cercanas; si ninguna sirve, reemplaza el destino por una ciudad que no esté incluida en las otras rondas. La búsqueda está limitada a cinco consultas por destino. El reloj comienza solamente al encontrar un panorama navegable, y la distancia se calcula contra las coordenadas **reales del panorama inicial**, aunque el jugador se desplace. Se ocultan direcciones y nombres de calles. Las atribuciones de Google y OSM se mantienen.
 
-Sin una clave configurada o sin panorama disponible, no se puede comenzar ni confirmar apuestas. Los fallos aparecen en pantalla. No se persiste la partida al recargar.
+Sin una clave configurada o sin panorama disponible, no se puede comenzar ni confirmar apuestas. Los fallos aparecen en pantalla. Con cuenta se guardan los resultados confirmados en el historial; todavía no se reanuda una partida al recargar.
 
 ## Puntaje
 Haversine, radio terrestre medio de 6371.0088 km. `round(5000 * exp(-distanciaKm / 500))`; máximo 25.000 puntos por partida. La apuesta no se modifica después de confirmar.
 
 ## Verificación y límites
-`npm test` cubre cálculo geográfico, antipodal, puntajes, selección sin repetición ciclo completo de partida, límite de tiempo, apuestas tardías y rondas agotadas. `npm run build` valida plantillas y tipos Angular. Para verificar imágenes, controles y autorización real de Google hace falta configurar una clave propia en el entorno. El mapa requiere conexión a servidores de OpenStreetMap. El catálogo es público en el frontend: este MVP no evita trampas.
+`npm test` cubre cálculo geográfico, antipodal, puntajes, selección sin repetición, ciclo completo de partida, límite de tiempo, apuestas tardías y rondas agotadas. También ejecuta las migraciones y verifica aislamiento entre usuarios, privilegios administrativos, plazos, puntajes e idempotencia del backend. `npm run build` valida plantillas y tipos Angular. Para verificar imágenes, controles y autorización real de Google hace falta configurar una clave propia en el entorno. El mapa requiere conexión a servidores de OpenStreetMap. Las coordenadas del catálogo siguen disponibles para el navegador: esta etapa no evita todas las trampas. Ver los límites de confianza y almacenamiento en la guía del backend.

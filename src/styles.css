@@ -32,3 +32,10 @@
 .playing .gamehud .timer{font-size:22px;min-width:95px;text-align:center}
 .urgent,.playing .gamehud .timer.urgent{color:#a33c22;background:#fff0e1}
 @media(max-width:550px){.home{padding:20px 0}.home-description{font-size:16px}.playing .gamehud{flex-wrap:wrap}.playing .gamehud .timer{font-size:16px;min-width:70px}.playing .gamehud button{margin-left:auto}}
+.account-actions{margin-left:auto;display:flex;align-items:center;gap:10px;font-size:13px}.account-actions button{margin:0}
+.account-panel,.history-panel,.catalog-panel{background:#fff;border:1px solid #dce3dc;border-radius:14px;padding:24px;max-width:900px;margin:20px auto}
+.account-panel{max-width:480px;position:relative}.account-panel h2{font-family:Manrope,sans-serif;font-size:23px;margin:0 30px 20px 0}
+.account-close{position:absolute;right:12px;top:12px}.account-panel form{display:grid;gap:16px}.account-panel label{display:grid;gap:7px;font-size:13px;font-weight:600}.account-panel input{width:100%;font-weight:400}.account-panel [role=status]{font-size:13px;color:#45665d}
+.section-heading{display:flex;justify-content:space-between;align-items:center;gap:12px}.section-heading h2,.catalog-panel h2{font-size:22px;margin:0}.history-panel>p,.catalog-panel p{font-size:14px;color:#63776e}
+.history-panel details{border-top:1px solid #e5ebe5;padding:16px 0}.history-panel summary{cursor:pointer;display:flex;justify-content:space-between;gap:15px;font-size:13px}.history-panel summary strong{white-space:nowrap;color:#156d70}.history-panel table{margin-top:15px}.guest-note{font-size:12px;color:#718177}.saved-game{font-size:14px;font-weight:600;color:#156d70}.error button{display:block;margin-top:12px}
+@media(max-width:550px){header:has(.account-actions){height:auto;min-height:68px;padding:14px 16px;flex-wrap:wrap}.account-actions{gap:7px;font-size:11px}.account-actions button{padding:9px;font-size:11px}.account-panel,.history-panel,.catalog-panel{padding:18px}.history-panel summary{flex-wrap:wrap}.history-panel{overflow-x:auto}}

@@ -16,11 +16,11 @@ export const PLACES: Place[] = [
 ];
 export function distanceKm(a:Point,b:Point):number {const rad=Math.PI/180;const dlat=(b.lat-a.lat)*rad;const dlng=(b.lng-a.lng)*rad;const h=Math.sin(dlat/2)**2+Math.cos(a.lat*rad)*Math.cos(b.lat*rad)*Math.sin(dlng/2)**2;return 6371.0088*2*Math.asin(Math.sqrt(Math.min(1,Math.max(0,h))));}
 export function score(km:number):number {if(!Number.isFinite(km)||km<0)throw new Error('Distancia inválida');return Math.round(5000*Math.exp(-km/500));}
-export function pickRounds(random:()=>number=Math.random):Place[] {const pool=[...PLACES];for(let i=pool.length-1;i>0;i--){const j=Math.floor(random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]];}return pool.slice(0,5);}
+export function pickRounds(random:()=>number=Math.random,places:readonly Place[]=PLACES):Place[] {const pool=[...places];for(let i=pool.length-1;i>0;i--){const j=Math.floor(random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]];}return pool.slice(0,5);}
 export interface RoundResult { name: string; distance: number | null; points: number; timedOut: boolean }
 export const ROUND_DURATION_MS = 120_000;
 export class Game {
- rounds=pickRounds(); index=0; guess:Point|null=null; target:Point|null=null;
+ rounds:Place[]; constructor(rounds:Place[]=pickRounds()){this.rounds=rounds;} index=0; guess:Point|null=null; target:Point|null=null;
  results:RoundResult[]=[];
  deadline:number|null=null;
  get finished(){return this.results.length===5;}
