@@ -12,6 +12,9 @@ import {GOOGLE_MAPS_API_KEY} from './google-maps-config';
 @if(accountOpen()){
 <section class="account-panel" aria-labelledby="account-title"><button class="quiet account-close" (click)="accountOpen.set(false)" aria-label="Cerrar formulario">✕</button>
 <h2 id="account-title">{{authMode()==='signup'?'Creá tu cuenta':authMode()==='reset'?'Recuperá tu contraseña':authMode()==='recover'?'Elegí una nueva contraseña':'Ingresá a tu cuenta'}}</h2>
+@if(authMode()==='login'||authMode()==='signup'){
+<button class="google-signin" type="button" (click)="signInWithGoogle()" [disabled]="authBusy()"><span aria-hidden="true" class="google-mark">G</span>{{authBusy()?'Conectando…':'Continuar con Google'}}</button><div class="auth-divider"><span>o con tu correo</span></div>
+}
 <form (submit)="authenticate($event)">
 @if(authMode()==='signup'){<label>Nombre<input name="display_name" autocomplete="nickname" required maxlength="50" [value]="authName()" (input)="authName.set(inputValue($event))"></label>}
 @if(authMode()!=='recover'){<label>Correo electrónico<input name="email" type="email" autocomplete="email" required [value]="authEmail()" (input)="authEmail.set(inputValue($event))"></label>}
@@ -71,6 +74,15 @@ class App implements OnDestroy {
  }
  inputValue(event:Event){return (event.target as HTMLInputElement).value;}
  openAccount(mode:'login'|'signup'|'reset'){this.authMode.set(mode);this.authPassword.set('');this.authMessage.set('');this.accountOpen.set(true);}
+ async signInWithGoogle(){
+  const client=this.backend.client;if(!client||this.authBusy())return;
+  this.authBusy.set(true);this.authMessage.set('');this.authPassword.set('');
+  try{
+   const {error}=await client.auth.signInWithOAuth({provider:'google',options:{redirectTo:window.location.origin+'/'}});
+   if(error)throw error;
+  }catch{this.authMessage.set('No se pudo iniciar sesión con Google. Volvé a intentar.');}
+  finally{this.authBusy.set(false);}
+ }
  async authenticate(event:Event){
   event.preventDefault();if(this.authBusy()||!this.backend.client)return;
   const client=this.backend.client;this.authBusy.set(true);this.authMessage.set('');

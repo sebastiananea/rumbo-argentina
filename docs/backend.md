@@ -32,6 +32,14 @@ No incluye multijugador ni pagos.
 
 No enviar claves privadas por chat ni guardarlas en Git. Este entorno necesita las variables públicas también en sus propios ajustes si se quiere probar conectado a Supabase; Vercel no las inyecta acá.
 
+## Ingreso con Google
+
+El formulario de ingreso y registro incluye **Continuar con Google**. Supabase crea la cuenta en el primer ingreso y administra la sesión y el perfil como en el flujo por correo. No hace falta una nueva migración para habilitar este botón.
+
+En Google Cloud crear un cliente OAuth de tipo Aplicación web. En **URIs de redireccionamiento autorizados** agregar exactamente `https://TU_PROJECT_REF.supabase.co/auth/v1/callback`, sin barra final; copiar la URL que muestra Supabase. En Supabase → Authentication → Providers → Google habilitar el proveedor y guardar el Client ID y el Client Secret de OAuth. El secreto va solo en Supabase; no es la clave de Google Maps ni una variable del frontend. Configurar la pantalla de consentimiento de Google; si la aplicación está en modo Testing, agregar los usuarios de prueba autorizados.
+
+El botón vuelve a la raíz del dominio desde el que se abrió el juego. Ese destino debe estar permitido en Authentication → URL Configuration. Verificar el flujo real en Vercel, incluyendo regreso al juego, historial y cierre de sesión. El proveedor Google se probó localmente mediante una redirección simulada, no mediante una cuenta real.
+
 ## Catálogo y ampliación
 
 `data/catalog-candidates.json` contiene 51 coordenadas aproximadas seleccionadas independientemente para empezar: barrios del AMBA, localidades de diferentes provincias y algunos puntos de rutas. **No es un catálogo de miles de puntos ni cobertura validada de Google.** La migración de datos los crea con estado `pending`. El sorteo no usa candidatos pendientes o sin cobertura.
