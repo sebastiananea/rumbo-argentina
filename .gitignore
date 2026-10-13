@@ -2,3 +2,4 @@ node_modules/
 dist/
 .angular/
 .env*
+src/google-maps-config.ts
