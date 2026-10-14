@@ -15,7 +15,7 @@ before(async()=>{
  create table auth.users(id uuid primary key,raw_user_meta_data jsonb default '{}');
  create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;
  grant usage on schema public,auth to anon,authenticated,service_role;`);
- for(const migration of ['202610130001_backend.sql','202610130002_catalog_candidates.sql','202610130003_daily_challenges.sql'])await db.exec(await readFile(new URL('../supabase/migrations/'+migration,import.meta.url),'utf8'));
+ for(const migration of ['202610130001_backend.sql','202610130002_catalog_candidates.sql','202610130003_daily_challenges.sql','202610140004_daily_attempt.sql'])await db.exec(await readFile(new URL('../supabase/migrations/'+migration,import.meta.url),'utf8'));
  await db.query('insert into auth.users(id) values($1),($2)',[alice,bob]);
  today=(await db.query<{day:string}>('select public.argentina_today()::text as day')).rows[0].day;
 });
@@ -74,9 +74,11 @@ test('No se puede iniciar otro panorama; plazo y puntos siguen controlados por e
  for(let index=0;index<5;index++){
   const point=game.locations[index];if(index>0)await db.query('select public.start_round($1,$2,$3,$4,$5)',[game.id,index,point.lat,point.lng,point.panoId]);
   await db.query('select public.finish_round($1,$2,$3,$4)',[game.id,index,point.lat,point.lng]);
+  if(index===0){const resumed=await create() as Game & {results:unknown[]};assert.equal(resumed.id,game.id);assert.equal(resumed.results.length,1);}
  }
  assert.deepEqual((await db.query('select daily_day::text,total,status from public.games where id=$1',[game.id])).rows[0],{daily_day:today,total:25000,status:'completed'});
- const replay=await create();assert.deepEqual(replay.locations,game.locations);
+ await assert.rejects(create(),/Ya completaste/);
+ await user(bob);const other=await create();assert.notEqual(other.id,game.id);
 });
 
 test('El próximo desafío se prepara antes de medianoche y no se muestra antes de su fecha',async()=>{
@@ -85,7 +87,7 @@ test('El próximo desafío se prepara antes de medianoche y no se muestra antes 
  await user(bob);assert.equal((await current())?.id,claim.id);
  // Advance only the trusted calendar helper; real SQL transactions and history remain intact.
  await owner();await db.exec(`create or replace function public.argentina_today() returns date language sql volatile set search_path='' as $$ select date '${today}'+1 $$`);
- await user(alice);assert.equal((await current())?.id,next.id);
+ await user(alice);assert.equal((await current())?.id,next.id);const newDay=await create();assert.equal(newDay.day,next.day);
 });
 
 test('Si falla la preparación mantiene el anterior y una publicación tardía no cambia el día ya iniciado',async()=>{
@@ -104,3 +106,8 @@ test('Conserva etiquetas y coordenadas del catálogo del día aunque el candidat
  await owner();await db.query("update public.locations set name='Changed candidate',lat=lat+0.01 where id=$1",[location.id]);
  await user(bob);const after=await current();assert.deepEqual(after,before);
 });
+
+ test('Una partida abandonada consume el intento y no altera historiales anteriores',async()=>{
+ await user(bob);const game=await create();await owner();await db.query("update public.games set status='abandoned' where id=$1",[game.id]);await user(bob);await assert.rejects(create(),/utilizaste tu intento/);
+ await user(alice);assert.ok(await create());
+ });
