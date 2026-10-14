@@ -1,9 +1,9 @@
 import {bootstrapApplication} from '@angular/platform-browser';
 import {Component,OnDestroy,NgZone,ChangeDetectorRef,signal} from '@angular/core';
 import * as L from 'leaflet';
-import {Game,Point,PLACES,pickRounds} from './game';
-import {findNavigablePanorama} from './street-view';
-import {Backend,type CatalogPlace,type GameHistory} from './backend';
+import {Game,Point,demoDailyRounds} from './game';
+import {findNavigablePanorama,navigableLocation} from './street-view';
+import {Backend,type DailyChallenge,type DailyLocation,type GameHistory} from './backend';
 import type {User} from '@supabase/supabase-js';
 import {GOOGLE_MAPS_API_KEY} from './google-maps-config';
 @Component({selector:'app-root',standalone:true,template:`
@@ -27,11 +27,14 @@ import {GOOGLE_MAPS_API_KEY} from './google-maps-config';
 }
 @if(accountError()){<p class="error" role="alert">{{accountError()}}</p>}
 @if(!started()){
-<section class="home" aria-labelledby="home-title"><div class="home-compass" aria-hidden="true">◈</div><p class="eyebrow">UN PAÍS. MILES DE CAMINOS.</p><h1 id="home-title">Encontrá tu rumbo.</h1><p class="home-description">Explorá Argentina en Street View y descubrí dónde estás.</p><div class="home-rules"><span>5 rondas</span><span>2 minutos por ubicación</span><span>Hasta 25.000 puntos</span></div><button class="start" (click)="begin()" [disabled]="busy()">{{busy()?'Preparando partida…':'Jugar →'}}</button><p class="home-note">Marcá tu apuesta y confirmala antes de que termine el tiempo. Si se agota, la ronda vale 0 puntos.</p>@if(!user()){<p class="guest-note">Jugás como invitado. Tu partida no se guarda en el historial.</p>}</section>
+<section class="home" aria-labelledby="home-title"><div class="home-compass" aria-hidden="true">◈</div><p class="eyebrow">UN PAÍS. MILES DE CAMINOS.</p><h1 id="home-title">Encontrá tu rumbo.</h1><p class="home-description">Explorá Argentina en Street View y descubrí dónde estás.</p>@if(backend.client){<p class="daily-label">Desafío del {{daily()?formatDay(daily()!.day):argentinaDay()}}</p><p class="daily-description">Las mismas 5 ubicaciones para todos. Se renuevan a medianoche de Argentina.</p>}@else{<p class="guest-note">Modo de prueba local</p>}
+<div class="home-rules"><span>5 rondas</span><span>2 minutos por ubicación</span><span>Hasta 25.000 puntos</span></div><button class="start" (click)="begin()" [disabled]="busy()||dailyLoading()||(!!backend.client&&!daily())">{{busy()||dailyLoading()?'Preparando desafío…':'Jugar →'}}</button>@if(dailyMessage()){<p role="status" class="daily-message">{{dailyMessage()}}</p><button class="quiet" (click)="refreshDaily()" [disabled]="dailyLoading()">Volver a consultar</button>}
+@if(daily()&&daily()!.sourceDay!==daily()!.day){<p class="guest-note">Hoy mantenemos el último desafío disponible.</p>}
+<p class="home-note">Marcá tu apuesta y confirmala antes de que termine el tiempo. Si se agota, la ronda vale 0 puntos.</p>@if(!user()){<p class="guest-note">Jugás como invitado. Tu partida no se guarda en el historial.</p>}</section>
 @if(user()){
 <section class="history-panel" aria-labelledby="history-title"><div class="section-heading"><h2 id="history-title">Tu historial</h2><button class="quiet" (click)="refreshAccount()" [disabled]="historyLoading()">Actualizar</button></div>
 @if(historyLoading()){<p role="status">Cargando historial…</p>}@else if(!historyItems().length){<p>Todavía no jugaste ninguna partida con tu cuenta.</p>}
-@for(item of historyItems();track item.id){<details><summary><span>{{historyDate(item.created_at)}} · {{historyLabel(item.status)}}</span><strong>{{item.total.toLocaleString('es-AR')}} / 25.000</strong></summary><table><thead><tr><th>Ronda</th><th>Destino</th><th>Resultado</th><th>Puntos</th></tr></thead><tbody>@for(round of sortedHistoryRounds(item);track round.round_index){<tr><td>{{round.round_index+1}}</td><td>{{round.name}}</td><td>{{round.status!=='completed'?'Sin terminar':round.timed_out?'Tiempo agotado':formatDistance(round.distance)}}</td><td>{{round.points}}</td></tr>}</tbody></table></details>}
+@for(item of historyItems();track item.id){<details><summary><span>{{item.daily_day?'Desafío '+formatDay(item.daily_day)+' · ':''}}{{historyDate(item.created_at)}} · {{historyLabel(item.status)}}</span><strong>{{item.total.toLocaleString('es-AR')}} / 25.000</strong></summary><table><thead><tr><th>Ronda</th><th>Destino</th><th>Resultado</th><th>Puntos</th></tr></thead><tbody>@for(round of sortedHistoryRounds(item);track round.round_index){<tr><td>{{round.round_index+1}}</td><td>{{round.name}}</td><td>{{round.status!=='completed'?'Sin terminar':round.timed_out?'Tiempo agotado':formatDistance(round.distance)}}</td><td>{{round.points}}</td></tr>}</tbody></table></details>}
 </section>
 }
 @if(catalogAdmin()){
@@ -40,7 +43,7 @@ import {GOOGLE_MAPS_API_KEY} from './google-maps-config';
 }@else{
 <section class="intro"><div><p class="eyebrow">UN PAÍS. MILES DE CAMINOS.</p><h1>¿Dónde estás?</h1><p>Explorá, buscá pistas y marcá tu destino.</p><button class="start" (click)="begin()">{{connected() ? 'Volver a la partida →' : 'Reintentar →'}}</button>@if(!connected()){<button class="quiet" (click)="goHome()">Volver al inicio</button>}</div><div class="stats"><div><small>RONDA</small><strong>{{game.index+1}} <span>/ 5</span></strong></div><div><small>PUNTAJE</small><strong>{{game.total.toLocaleString('es-AR')}} <span>/ 25.000</span></strong></div></div></section>
 @if(error()){<div class="error" role="alert">{{error()}}@if(roundSaveFailed()){<button (click)="submit()" [disabled]="submitting()">Reintentar guardar ronda</button>}</div>}
-<div class="workspace"><div class="gamehud"><span>Ronda {{game.index+1}} / 5 · {{game.total.toLocaleString('es-AR')}} puntos</span><span class="timer" [class.urgent]="remaining()<=20 && !game.revealed" role="timer" aria-label="Tiempo restante">{{busy() ? 'Cargando…' : timeLabel()}}</span><button (click)="leave()">Salir de la vista de juego ✕</button></div><section class="explore"><div class="panelbar"><span class="live">● {{connected()?'STREET VIEW':busy()?'CARGANDO STREET VIEW':'STREET VIEW NO DISPONIBLE'}}</span><span>Single player</span></div><div class="viewer" id="panorama" [class.inactive]="!connected()"></div>
+<div class="workspace"><div class="gamehud"><span>{{gameDay()?formatDay(gameDay()!)+' · ':''}}Ronda {{game.index+1}} / 5 · {{game.total.toLocaleString('es-AR')}} puntos</span><span class="timer" [class.urgent]="remaining()<=20 && !game.revealed" role="timer" aria-label="Tiempo restante">{{busy() ? 'Cargando…' : timeLabel()}}</span><button (click)="leave()">Salir de la vista de juego ✕</button></div><section class="explore"><div class="panelbar"><span class="live">● {{connected()?'STREET VIEW':busy()?'CARGANDO STREET VIEW':'STREET VIEW NO DISPONIBLE'}}</span><span>Single player</span></div><div class="viewer" id="panorama" [class.inactive]="!connected()"></div>
 @if(!connected()){<div class="practice"><span class="compass">◈</span><p class="eyebrow">EXPLORÁ ARGENTINA</p><h2>Street View no está disponible</h2><p>Se necesita una conexión válida con Google Maps para jugar.</p></div>}
 @if(busy()){<div class="loading" role="status">Buscando un panorama…</div>}
 <div class="viewfooter"><span>{{game.revealed?game.rounds[game.index].name:'Encontrá tu rumbo'}}</span><button class="quiet" (click)="resetView()" [disabled]="!connected()||busy()">↺ Volver al inicio</button></div></section>
@@ -54,12 +57,15 @@ class App implements OnDestroy {
  user=signal<User|null>(null);displayName=signal('Jugador');historyItems=signal<GameHistory[]>([]);historyLoading=signal(false);
  accountOpen=signal(false);authMode=signal<'login'|'signup'|'reset'|'recover'>('login');authName=signal('');authEmail=signal('');authPassword=signal('');authMessage=signal('');authBusy=signal(false);accountError=signal('');
  catalogAdmin=signal(false);catalogChecking=signal(false);catalogMessage=signal('');submitting=signal(false);roundSaveFailed=signal(false);
- backendGameId:string|null=null;private catalogPool:CatalogPlace[]=[];private pendingGameRequest:string|null=null;private accountEpoch=0;
+ daily=signal<DailyChallenge|null>(null);dailyLoading=signal(false);dailyMessage=signal('');gameDay=signal<string|null>(null);private dailyRefreshTimer?:ReturnType<typeof setInterval>;
+ backendGameId:string|null=null;private pendingGameRequest:string|null=null;private accountEpoch=0;
  private authSubscription?:{unsubscribe():void};private authInitialized:Promise<void>;
 
  started=signal(false);remaining=signal(120);private timer?:ReturnType<typeof setInterval>;
  playing=signal(false);mapExpanded=signal(false);private resizeObserver?:ResizeObserver;game=new Game();connected=signal(false);busy=signal(false);error=signal('');private map!:L.Map;private pins=L.layerGroup();private panorama?:google.maps.StreetViewPanorama;private service?:google.maps.StreetViewService;private startPano='';private request=0;private destroyed=false;private script?:HTMLScriptElement;private authFailed=false;
- constructor(private zone:NgZone,private cdr:ChangeDetectorRef){this.authInitialized=this.initializeAuth();}
+ constructor(private zone:NgZone,private cdr:ChangeDetectorRef){this.authInitialized=this.initializeAuth();
+  if(this.backend.client){void this.refreshDaily();this.dailyRefreshTimer=setInterval(()=>{if(!this.started()&&document.visibilityState==='visible'&&this.daily()?.day!==this.argentinaDay())void this.refreshDaily();},60000);}
+ }
  private async initializeAuth(){
   const client=this.backend.client;if(!client)return;
   const {data}=client.auth.onAuthStateChange((event,session)=>{
@@ -145,25 +151,35 @@ class App implements OnDestroy {
   }catch{this.catalogMessage.set('No se pudo completar la revisión. Comprobá la conexión y el acceso a Google Maps; las ubicaciones pendientes no se habilitaron.');}
   finally{this.catalogChecking.set(false);}
  }
+ argentinaDay(){return new Intl.DateTimeFormat('en-CA',{timeZone:'America/Argentina/Buenos_Aires',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());}
+ formatDay(day:string){const [year,month,date]=day.split('-');return `${date}/${month}/${year}`;}
+ async refreshDaily(){
+  if(!this.backend.client||this.dailyLoading())return;
+  this.dailyLoading.set(true);this.dailyMessage.set('');
+  try{const daily=await this.backend.daily();this.daily.set(daily);if(!daily)this.dailyMessage.set('El desafío diario se está preparando. Volvé a consultar en unos minutos.');}
+  catch{this.dailyMessage.set('No se pudo consultar el desafío diario. Volvé a intentar.');}
+  finally{this.dailyLoading.set(false);}
+ }
  private async prepareGame(){
   await this.authInitialized;
-  if(this.user()&&this.backend.client){
-   if(this.backendGameId){this.catalogPool=await this.backend.catalog();return;}
+  if(!this.backend.client){const day=this.argentinaDay();this.game=new Game(demoDailyRounds(day));this.gameDay.set(day);return;}
+  if(this.user()){
+   if(this.backendGameId)return;
    this.pendingGameRequest??=crypto.randomUUID();
    const created=await this.backend.createGame(this.pendingGameRequest);
    if(created.status!=='playing'||created.locations.length!==5)throw new Error('Partida no disponible');
-   this.game=new Game(created.locations);this.backendGameId=created.id;
-   this.catalogPool=await this.backend.catalog();
+   this.game=new Game(created.locations);this.gameDay.set(created.day);this.backendGameId=created.id;
   }else{
-   this.catalogPool=this.backend.client?await this.backend.catalog():[];
-   this.game=new Game(this.catalogPool.length>=5?pickRounds(Math.random,this.catalogPool):pickRounds());
+   const challenge=await this.backend.daily();
+   if(!challenge||challenge.locations.length!==5)throw new Error('El desafío diario todavía se está preparando');
+   this.daily.set(challenge);this.game=new Game(challenge.locations);this.gameDay.set(challenge.day);
   }
  }
  goHome(){
   this.stopTimer();this.request++;this.resizeObserver?.disconnect();this.map?.remove();this.pins.clearLayers();
   if(this.panorama){google.maps.event.clearInstanceListeners(this.panorama);this.panorama.setVisible(false);}
   this.panorama=undefined;this.service=undefined;this.connected.set(false);this.started.set(false);this.leave();
-  this.backendGameId=null;this.pendingGameRequest=null;this.game=new Game();this.error.set('');this.roundSaveFailed.set(false);this.remaining.set(120);this.cdr.detectChanges();window.scrollTo(0,0);
+  this.backendGameId=null;this.pendingGameRequest=null;this.gameDay.set(null);this.game=new Game();this.error.set('');this.roundSaveFailed.set(false);this.remaining.set(120);this.cdr.detectChanges();window.scrollTo(0,0);
   if(this.user())void this.refreshAccount();
  }
 
@@ -201,16 +217,20 @@ class App implements OnDestroy {
   const isCurrent=()=>id===this.request&&!this.destroyed&&!this.authFailed;
   this.busy.set(true);this.error.set('');this.game.target=null;
   const place=this.game.rounds[this.game.index];
-  const reserved=new Set(this.game.rounds.map(round=>round.name));
-  const alternatives=(this.catalogPool.length>=5?this.catalogPool:PLACES).filter(candidate=>!reserved.has(candidate.name)).slice(0,7);
+
   try{
-   const found=await findNavigablePanorama(request=>this.service!.getPanorama(request),[place,...alternatives],isCurrent);
+   const pinned=(place as Partial<DailyLocation>).panoId;
+   let found;
+   if(pinned){
+    const {data}=await this.service!.getPanorama({pano:pinned});
+    const location=navigableLocation(data);
+    if(!location||location.pano!==pinned)throw new Error('Panorama diario no disponible');
+    found={place,...location};
+   }else found=await findNavigablePanorama(request=>this.service!.getPanorama(request),[place],isCurrent);
    if(!isCurrent())return;
    if(!found)throw new Error('Sin panorama navegable');
    if(this.backendGameId){
-    const location=found.place as CatalogPlace;
-    if(location.id!==(place as CatalogPlace).id)await this.backend.replaceLocation(this.backendGameId,this.game.index,location.id);
-    const timing=await this.backend.startRound(this.backendGameId,this.game.index,found.target);
+    const timing=await this.backend.startRound(this.backendGameId,this.game.index,found.target,found.pano);
     if(!isCurrent())return;
     this.game.deadline=Date.now()+Math.max(0,Date.parse(timing.deadline)-Date.parse(timing.serverNow));
    }
@@ -221,7 +241,7 @@ class App implements OnDestroy {
    this.panorama!.setVisible(true);this.startTimer();
   }catch{
    if(!isCurrent())return;
-   this.error.set('No se pudo cargar un Street View navegable. Revisá la cobertura, la clave de Google Maps y tu conexión, y volvé a intentar.');
+   this.error.set('No se pudo cargar esta ubicación del desafío diario. Volvé a intentar en unos momentos.');
    this.panorama?.setVisible(false);this.connected.set(false);this.game.target=null;this.leave();
   }finally{if(id===this.request)this.busy.set(false);}
  }
@@ -248,6 +268,6 @@ class App implements OnDestroy {
  next(){if(!this.game.revealed||this.game.finished)return;this.mapExpanded.set(false);this.game.next();this.clear();if(this.connected())void this.loadRound();else this.game.target=null;}
  restart(){this.goHome();this.begin();}
  formatDistance(km:number|null){if(km===null)return 'Sin apuesta';return km<1?Math.round(km*1000)+' m':km.toLocaleString('es-AR',{maximumFractionDigits:1})+' km';}
- ngOnDestroy(){this.authSubscription?.unsubscribe();this.stopTimer();this.destroyed=true;this.resizeObserver?.disconnect();document.body.style.overflow='';this.request++;this.map?.remove();this.panorama?.setVisible(false);if(this.panorama)google.maps.event.clearInstanceListeners(this.panorama);delete (window as any).gm_authFailure;}
+ ngOnDestroy(){this.authSubscription?.unsubscribe();if(this.dailyRefreshTimer)clearInterval(this.dailyRefreshTimer);this.stopTimer();this.destroyed=true;this.resizeObserver?.disconnect();document.body.style.overflow='';this.request++;this.map?.remove();this.panorama?.setVisible(false);if(this.panorama)google.maps.event.clearInstanceListeners(this.panorama);delete (window as any).gm_authFailure;}
 }
 bootstrapApplication(App).catch(console.error);

@@ -12,7 +12,7 @@ export interface PanoramaRequest {
 }
 export interface NavigablePanorama {place: Place; pano: string; target: Point}
 
-function navigableLocation(data: PanoramaData): {pano: string; target: Point} | null {
+export function navigableLocation(data: PanoramaData): {pano: string; target: Point} | null {
  const location=data.location;
  const pano=location?.pano;
  if(!pano?.trim()||!location?.latLng)return null;

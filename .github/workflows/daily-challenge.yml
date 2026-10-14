@@ -1,0 +1,51 @@
+name: Preparar desafío diario
+on:
+  schedule:
+    # 22:00 and 23:00 Argentina: prepare before midnight, with a retry window.
+    - cron: '0 1,2 * * *'
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Día a preparar
+        type: choice
+        options: [today, tomorrow]
+        default: today
+permissions:
+  contents: read
+concurrency:
+  group: rumbo-daily-preparation
+  cancel-in-progress: false
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+      RUMBO_SITE_URL: ${{ vars.RUMBO_SITE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
+      DAILY_PREPARE_AHEAD: ${{ github.event_name == 'schedule' || inputs.target == 'tomorrow' }}
+    steps:
+      - name: Comprobar configuración
+        id: config
+        run: |
+          if [ -n "$SUPABASE_URL" ] && [ -n "$RUMBO_SITE_URL" ] && [ -n "$SUPABASE_SERVICE_ROLE_KEY" ] && [ -n "$GOOGLE_MAPS_API_KEY" ]; then
+            echo 'ready=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'Falta configurar las variables y secretos del preparador diario. No se hicieron consultas a Google.'
+          fi
+      - uses: actions/checkout@v4
+        if: steps.config.outputs.ready == 'true'
+      - uses: actions/setup-node@v4
+        if: steps.config.outputs.ready == 'true'
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Instalar dependencias y navegador
+        if: steps.config.outputs.ready == 'true'
+        run: |
+          npm ci --no-audit --no-fund
+          npx playwright install --with-deps chromium
+      - name: Preparar y publicar cinco ubicaciones
+        if: steps.config.outputs.ready == 'true'
+        run: node --experimental-strip-types scripts/prepare-daily.mjs

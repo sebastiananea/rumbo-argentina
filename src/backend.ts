@@ -3,8 +3,10 @@ import type {Place, Point, RoundResult} from './game';
 import {SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY} from './google-maps-config';
 
 export interface CatalogPlace extends Place {id:string; region:string; kind:'city'|'town'|'road'}
+export interface DailyLocation extends CatalogPlace {panoId:string}
+export interface DailyChallenge {id:string;day:string;sourceDay:string;locations:DailyLocation[]}
 export interface GameHistory {
- id:string; status:'playing'|'completed'|'abandoned'; total:number; created_at:string;
+ id:string; daily_day:string|null; status:'playing'|'completed'|'abandoned'; total:number; created_at:string;
  game_rounds:{round_index:number; name:string; status:string; distance:number|null; points:number; timed_out:boolean}[];
 }
 export interface SavedRound extends RoundResult {finished:boolean; total:number}
@@ -20,17 +22,12 @@ export class Backend {
   if(error)throw new Error(error.message);
   return data as T;
  }
- async catalog():Promise<CatalogPlace[]>{
-  const {data,error}=await this.requireClient().from('locations').select('id,name,region,kind,lat,lng').eq('validation_status','active').order('id').limit(1000);
-  if(error)throw new Error('No se pudo obtener el catálogo.');
-  return (data??[]).map(location=>({...location,hint:''})) as CatalogPlace[];
- }
- createGame(requestId:string){return this.rpc<{id:string;status:string;locations:CatalogPlace[]}>('create_game',{p_request_id:requestId});}
- replaceLocation(gameId:string,index:number,locationId:string){return this.rpc<void>('replace_round_location',{p_game_id:gameId,p_index:index,p_location_id:locationId});}
- startRound(gameId:string,index:number,target:Point){return this.rpc<{deadline:string;serverNow:string}>('start_round',{p_game_id:gameId,p_index:index,p_target_lat:target.lat,p_target_lng:target.lng});}
+ daily(){return this.rpc<DailyChallenge|null>('get_daily_challenge');}
+ createGame(requestId:string){return this.rpc<{id:string;status:string;day:string;locations:DailyLocation[]}>('create_game',{p_request_id:requestId});}
+ startRound(gameId:string,index:number,target:Point,panoId:string){return this.rpc<{deadline:string;serverNow:string}>('start_round',{p_game_id:gameId,p_index:index,p_target_lat:target.lat,p_target_lng:target.lng,p_pano_id:panoId});}
  finishRound(gameId:string,index:number,guess:Point|null){return this.rpc<SavedRound>('finish_round',{p_game_id:gameId,p_index:index,p_guess_lat:guess?.lat??null,p_guess_lng:guess?.lng??null});}
  async history():Promise<GameHistory[]>{
-  const {data,error}=await this.requireClient().from('games').select('id,status,total,created_at,game_rounds(round_index,name,status,distance,points,timed_out)').order('created_at',{ascending:false}).limit(30);
+  const {data,error}=await this.requireClient().from('games').select('id,status,total,created_at,daily_day,game_rounds(round_index,name,status,distance,points,timed_out)').order('created_at',{ascending:false}).limit(30);
   if(error)throw new Error('No se pudo cargar tu historial.');
   return data as GameHistory[];
  }

@@ -17,6 +17,12 @@ export const PLACES: Place[] = [
 export function distanceKm(a:Point,b:Point):number {const rad=Math.PI/180;const dlat=(b.lat-a.lat)*rad;const dlng=(b.lng-a.lng)*rad;const h=Math.sin(dlat/2)**2+Math.cos(a.lat*rad)*Math.cos(b.lat*rad)*Math.sin(dlng/2)**2;return 6371.0088*2*Math.asin(Math.sqrt(Math.min(1,Math.max(0,h))));}
 export function score(km:number):number {if(!Number.isFinite(km)||km<0)throw new Error('Distancia inválida');return Math.round(5000*Math.exp(-km/500));}
 export function pickRounds(random:()=>number=Math.random,places:readonly Place[]=PLACES):Place[] {const pool=[...places];for(let i=pool.length-1;i>0;i--){const j=Math.floor(random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]];}return pool.slice(0,5);}
+// Unconfigured development only: fixed candidate centers for each Argentina date.
+export function demoDailyRounds(day:string):Place[] {
+ let state=2166136261;for(const character of day)state=Math.imul(state^character.charCodeAt(0),16777619)>>>0;
+ const random=()=>{state=(Math.imul(state,1664525)+1013904223)>>>0;return state/4294967296;};
+ return pickRounds(random);
+}
 export interface RoundResult { name: string; distance: number | null; points: number; timedOut: boolean }
 export const ROUND_DURATION_MS = 120_000;
 export class Game {
