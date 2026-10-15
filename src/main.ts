@@ -7,7 +7,7 @@ import {Backend,type DailyChallenge,type DailyLeaderboard,type DailyLocation,typ
 import type {User} from '@supabase/supabase-js';
 import {GOOGLE_MAPS_API_KEY} from './google-maps-config';
 @Component({selector:'app-root',standalone:true,template:`
-<header><a class="brand" href="/">◈ <span>rumbo<span class="dot">.</span></span></a><span class="country">ARGENTINA <span>🇦🇷</span></span>@if(backend.client && (!started() || game.finished)){<div class="account-actions">@if(user()){<span>{{displayName()}}</span><button class="quiet" (click)="signOut()" [disabled]="authBusy()||catalogChecking()">Salir de mi cuenta</button>}@else{<button class="quiet" (click)="openAccount('login')">Ingresar</button><button (click)="openAccount('signup')">Crear cuenta</button>}</div>}</header>
+<header><a class="brand" href="/">◈ <span>rumbo<span class="dot">.</span></span></a><span class="country">ARGENTINA <span>🇦🇷</span></span>@if(backend.client && (!started() || game.finished)){<div class="account-actions">@if(user()){<span>{{displayName()}}</span><button class="quiet" (click)="signOut()" [disabled]="authBusy()||catalogChecking()">Salir de mi cuenta</button>}@else{<button class="quiet" (click)="openAccount('login')">Ingresar</button><button (click)="openAccount('signup')">Crear cuenta</button>}</div>}<button type="button" class="theme-toggle quiet" (click)="toggleTheme()" [attr.aria-pressed]="darkMode()" [attr.aria-label]="darkMode()?'Activar modo claro':'Activar modo oscuro'"><span aria-hidden="true">{{darkMode()?'☀':'☾'}}</span><span>{{darkMode()?'Claro':'Oscuro'}}</span></button></header>
 <main [class.playing]="playing()">
 @if(accountOpen()){
 <section class="account-panel" aria-labelledby="account-title"><button class="quiet account-close" (click)="accountOpen.set(false)" aria-label="Cerrar formulario">✕</button>
@@ -73,6 +73,14 @@ import {GOOGLE_MAPS_API_KEY} from './google-maps-config';
 }
 <footer><span>De la Puna a la Patagonia.</span><span>5 rondas · 2 minutos por ronda</span></footer></main>`})
 class App implements OnDestroy {
+ darkMode=signal(document.documentElement.dataset['theme']==='dark');
+ private themePreference:string|null=null;
+ private readonly colorScheme=window.matchMedia('(prefers-color-scheme: dark)');
+ private readonly onColorSchemeChange=()=>{if(!this.themePreference)this.applyTheme(this.colorScheme.matches);};
+ private readonly onThemeStorage=(event:StorageEvent)=>{if(event.key==='rumbo-theme'||event.key===null){this.readThemePreference();this.applyTheme(this.themePreference?this.themePreference==='dark':this.colorScheme.matches);}};
+ private readThemePreference(){try{const value=localStorage.getItem('rumbo-theme');this.themePreference=value==='dark'||value==='light'?value:null;}catch{this.themePreference=null;}}
+ private applyTheme(dark:boolean){this.darkMode.set(dark);document.documentElement.dataset['theme']=dark?'dark':'light';}
+ toggleTheme(){const dark=!this.darkMode();this.themePreference=dark?'dark':'light';this.applyTheme(dark);try{localStorage.setItem('rumbo-theme',this.themePreference);}catch{}}
  readonly backend=new Backend();
  user=signal<User|null>(null);displayName=signal('Jugador');historyItems=signal<GameHistory[]>([]);historyLoading=signal(false);
  accountOpen=signal(false);authMode=signal<'login'|'signup'|'reset'|'recover'>('login');authName=signal('');authEmail=signal('');authPassword=signal('');authMessage=signal('');authBusy=signal(false);accountError=signal('');
@@ -85,7 +93,10 @@ class App implements OnDestroy {
 
  finalResults=signal(false);started=signal(false);remaining=signal(120);private timer?:ReturnType<typeof setInterval>;
  playing=signal(false);mapExpanded=signal(false);private resizeObserver?:ResizeObserver;game=new Game();connected=signal(false);busy=signal(false);error=signal('');private map!:L.Map;private pins=L.layerGroup();private panorama?:google.maps.StreetViewPanorama;private service?:google.maps.StreetViewService;private startPano='';private request=0;private destroyed=false;private script?:HTMLScriptElement;private authFailed=false;
- constructor(private zone:NgZone,private cdr:ChangeDetectorRef){this.authInitialized=this.initializeAuth();
+ constructor(private zone:NgZone,private cdr:ChangeDetectorRef){
+  this.readThemePreference();this.applyTheme(this.themePreference?this.themePreference==='dark':this.colorScheme.matches);
+  this.colorScheme.addEventListener('change',this.onColorSchemeChange);window.addEventListener('storage',this.onThemeStorage);
+  this.authInitialized=this.initializeAuth();
   if(!this.backend.client)void this.refreshAttempt();
   if(this.backend.client){void this.refreshDaily();this.dailyRefreshTimer=setInterval(()=>{if(!this.started()&&document.visibilityState==='visible'){if(this.daily()?.day!==this.argentinaDay())void this.refreshDaily();else void this.refreshLeaderboard();}},60000);}
  }
@@ -328,6 +339,6 @@ class App implements OnDestroy {
  clear(){this.pins.clearLayers();this.map.setView([-38.5,-64],4);}
  next(){if(!this.game.revealed||this.game.finished)return;this.mapExpanded.set(false);this.game.next();this.playing.set(true);document.body.style.overflow='hidden';this.cdr.detectChanges();this.map.invalidateSize({pan:false});this.clear();if(this.connected())void this.loadRound();else this.game.target=null;}
  formatDistance(km:number|null){if(km===null)return 'Sin apuesta';return km<1?Math.round(km*1000)+' m':km.toLocaleString('es-AR',{maximumFractionDigits:1})+' km';}
- ngOnDestroy(){this.authSubscription?.unsubscribe();if(this.dailyRefreshTimer)clearInterval(this.dailyRefreshTimer);this.stopTimer();this.destroyed=true;this.resizeObserver?.disconnect();document.body.style.overflow='';this.request++;this.map?.remove();this.panorama?.setVisible(false);if(this.panorama)google.maps.event.clearInstanceListeners(this.panorama);delete (window as any).gm_authFailure;}
+ ngOnDestroy(){this.colorScheme.removeEventListener('change',this.onColorSchemeChange);window.removeEventListener('storage',this.onThemeStorage);this.authSubscription?.unsubscribe();if(this.dailyRefreshTimer)clearInterval(this.dailyRefreshTimer);this.stopTimer();this.destroyed=true;this.resizeObserver?.disconnect();document.body.style.overflow='';this.request++;this.map?.remove();this.panorama?.setVisible(false);if(this.panorama)google.maps.event.clearInstanceListeners(this.panorama);delete (window as any).gm_authFailure;}
 }
 bootstrapApplication(App).catch(console.error);
