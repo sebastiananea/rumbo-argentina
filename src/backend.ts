@@ -9,6 +9,7 @@ export interface GameHistory {
  id:string; daily_day:string|null; status:'playing'|'completed'|'abandoned'; total:number; created_at:string;
  game_rounds:{round_index:number; name:string; status:string; distance:number|null; points:number; timed_out:boolean}[];
 }
+export interface DailyLeaderboard {day:string;participants:number;completed:number;entries:{position:number;name:string;points:number;mine:boolean}[]}
 export interface SavedRound extends RoundResult {finished:boolean; total:number}
 
 export class Backend {
@@ -22,6 +23,7 @@ export class Backend {
   if(error)throw new Error(error.message);
   return data as T;
  }
+ leaderboard(){return this.rpc<DailyLeaderboard>('get_daily_leaderboard');}
  daily(){return this.rpc<DailyChallenge|null>('get_daily_challenge');}
  createGame(requestId:string){return this.rpc<{id:string;status:string;day:string;results:RoundResult[];locations:DailyLocation[]}>('create_game',{p_request_id:requestId});}
  startRound(gameId:string,index:number,target:Point,panoId:string){return this.rpc<{deadline:string;serverNow:string}>('start_round',{p_game_id:gameId,p_index:index,p_target_lat:target.lat,p_target_lng:target.lng,p_pano_id:panoId});}

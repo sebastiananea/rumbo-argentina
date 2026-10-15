@@ -3,7 +3,7 @@ import {Component,OnDestroy,NgZone,ChangeDetectorRef,signal} from '@angular/core
 import * as L from 'leaflet';
 import {Game,Point,demoDailyRounds} from './game';
 import {findNavigablePanorama,navigableLocation} from './street-view';
-import {Backend,type DailyChallenge,type DailyLocation,type GameHistory} from './backend';
+import {Backend,type DailyChallenge,type DailyLeaderboard,type DailyLocation,type GameHistory} from './backend';
 import type {User} from '@supabase/supabase-js';
 import {GOOGLE_MAPS_API_KEY} from './google-maps-config';
 @Component({selector:'app-root',standalone:true,template:`
@@ -35,6 +35,15 @@ import {GOOGLE_MAPS_API_KEY} from './google-maps-config';
 @if(dailyMessage()){<p role="status" class="daily-message">{{dailyMessage()}}</p><button class="quiet" (click)="refreshDaily()" [disabled]="dailyLoading()">Volver a consultar</button>}
 @if(daily()&&daily()!.sourceDay!==daily()!.day){<p class="guest-note">Hoy mantenemos el último desafío disponible.</p>}
 <p class="home-note">Si se agota el tiempo, la ronda suma 0 puntos.<br>Nuevo desafío a medianoche de Argentina.</p>@if(!user()){<p class="guest-note">Tu resultado de invitado queda en este navegador. Ingresá para guardarlo en tu cuenta.</p>}@if(!backend.client){<p class="guest-note">Modo de prueba local</p>}</div></section>
+@if(backend.client){<section class="leaderboard" aria-labelledby="leaderboard-title"><div class="section-heading"><div><p class="eyebrow">DESAFÍO DIARIO · {{formatDay(leaderboard()?.day??daily()?.day??argentinaDay())}}</p><h2 id="leaderboard-title">Los 5 mejores del día</h2></div><button class="quiet" (click)="refreshLeaderboard()" [disabled]="leaderboardLoading()" aria-label="Actualizar ranking">{{leaderboardLoading()?'Actualizando…':'Actualizar'}}</button></div>
+@if(leaderboardError()){<p role="status">{{leaderboardError()}}</p>}
+@else if(!leaderboard()&&leaderboardLoading()){<p role="status">Cargando puntajes…</p>}
+@else if(leaderboard()){<p class="leaderboard-count">{{leaderboard()!.participants}} participantes · {{leaderboard()!.completed}} desafíos completados</p>
+@if(!leaderboard()!.entries.length){<div class="leaderboard-empty">Todavía no hay resultados. El primer puesto te espera.</div>}
+@else{<ol class="leaderboard-list">@for(entry of leaderboard()!.entries;track entry.position){<li [class.is-you]="entry.mine"><span class="leaderboard-position">{{entry.position}}</span><span class="leaderboard-name">{{entry.name}}@if(entry.mine){<small>Vos</small>}</span><strong>{{entry.points.toLocaleString('es-AR')}} <small>pts</small></strong></li>}</ol>}
+<p class="guest-note">Participan las cuentas que completan las cinco rondas. En caso de empate, queda primero quien terminó antes.</p>}
+</section>}
+
 @if(user()){
 <section class="history-panel" aria-labelledby="history-title"><div class="section-heading"><h2 id="history-title">Tu historial</h2><button class="quiet" (click)="refreshAccount()" [disabled]="historyLoading()">Actualizar</button></div>
 @if(historyLoading()){<p role="status">Cargando historial…</p>}@else if(!historyItems().length){<p>Todavía no jugaste ninguna partida con tu cuenta.</p>}
@@ -66,6 +75,7 @@ class App implements OnDestroy {
  user=signal<User|null>(null);displayName=signal('Jugador');historyItems=signal<GameHistory[]>([]);historyLoading=signal(false);
  accountOpen=signal(false);authMode=signal<'login'|'signup'|'reset'|'recover'>('login');authName=signal('');authEmail=signal('');authPassword=signal('');authMessage=signal('');authBusy=signal(false);accountError=signal('');
  catalogAdmin=signal(false);catalogChecking=signal(false);catalogMessage=signal('');submitting=signal(false);roundSaveFailed=signal(false);
+ leaderboard=signal<DailyLeaderboard|null>(null);leaderboardLoading=signal(false);leaderboardError=signal('');private leaderboardRequest=0;
  dailyAttempt=signal<GameHistory|null>(null);attemptLoading=signal(false);attemptError=signal('');private attemptEpoch=0;
  daily=signal<DailyChallenge|null>(null);dailyLoading=signal(false);dailyMessage=signal('');gameDay=signal<string|null>(null);private dailyRefreshTimer?:ReturnType<typeof setInterval>;
  backendGameId:string|null=null;private pendingGameRequest:string|null=null;private accountEpoch=0;
@@ -75,7 +85,7 @@ class App implements OnDestroy {
  playing=signal(false);mapExpanded=signal(false);private resizeObserver?:ResizeObserver;game=new Game();connected=signal(false);busy=signal(false);error=signal('');private map!:L.Map;private pins=L.layerGroup();private panorama?:google.maps.StreetViewPanorama;private service?:google.maps.StreetViewService;private startPano='';private request=0;private destroyed=false;private script?:HTMLScriptElement;private authFailed=false;
  constructor(private zone:NgZone,private cdr:ChangeDetectorRef){this.authInitialized=this.initializeAuth();
   if(!this.backend.client)void this.refreshAttempt();
-  if(this.backend.client){void this.refreshDaily();this.dailyRefreshTimer=setInterval(()=>{if(!this.started()&&document.visibilityState==='visible'&&this.daily()?.day!==this.argentinaDay())void this.refreshDaily();},60000);}
+  if(this.backend.client){void this.refreshDaily();this.dailyRefreshTimer=setInterval(()=>{if(!this.started()&&document.visibilityState==='visible'){if(this.daily()?.day!==this.argentinaDay())void this.refreshDaily();else void this.refreshLeaderboard();}},60000);}
  }
  private async initializeAuth(){
   const client=this.backend.client;if(!client)return;
@@ -83,7 +93,7 @@ class App implements OnDestroy {
    this.user.set(session?.user??null);this.historyItems.set([]);this.catalogAdmin.set(false);this.accountEpoch++;this.dailyAttempt.set(null);this.attemptEpoch++;this.attemptLoading.set(!!session?.user);
    void this.refreshAttempt();
    if(event==='PASSWORD_RECOVERY'){this.authMode.set('recover');this.accountOpen.set(true);}
-   if(session?.user)setTimeout(()=>{void this.refreshAccount();},0);
+   setTimeout(()=>{if(session?.user)void this.refreshAccount();void this.refreshLeaderboard();},0);
   });
   this.authSubscription=data.subscription;
   const {data:session,error}=await client.auth.getSession();
@@ -171,7 +181,15 @@ class App implements OnDestroy {
   this.dailyLoading.set(true);this.dailyMessage.set('');
   try{const daily=await this.backend.daily();this.daily.set(daily);await this.refreshAttempt();if(!daily)this.dailyMessage.set('El desafío diario se está preparando. Volvé a consultar en unos minutos.');}
   catch{this.dailyMessage.set('No se pudo consultar el desafío diario. Volvé a intentar.');}
-  finally{this.dailyLoading.set(false);}
+  finally{this.dailyLoading.set(false);void this.refreshLeaderboard();}
+ }
+ async refreshLeaderboard(){
+  if(!this.backend.client)return;
+  const request=++this.leaderboardRequest;
+  this.leaderboardLoading.set(true);this.leaderboardError.set('');
+  try{const result=await this.backend.leaderboard();if(request===this.leaderboardRequest)this.leaderboard.set(result);}
+  catch{if(request===this.leaderboardRequest){this.leaderboard.set(null);this.leaderboardError.set('No se pudo cargar el ranking. Volvé a intentar con Actualizar.');}}
+  finally{if(request===this.leaderboardRequest)this.leaderboardLoading.set(false);}
  }
  completedDaily(){return this.dailyAttempt()?.status==='completed'?this.dailyAttempt():null;}
  private guestResult(day:string):GameHistory|null{
@@ -206,7 +224,7 @@ class App implements OnDestroy {
  goHome(){
   this.stopTimer();this.request++;this.disposeGameViews();this.started.set(false);this.leave();
   this.finalResults.set(false);this.backendGameId=null;this.pendingGameRequest=null;this.gameDay.set(null);this.game=new Game();this.error.set('');this.roundSaveFailed.set(false);this.remaining.set(120);this.cdr.detectChanges();window.scrollTo(0,0);
-  if(this.user())void this.refreshAccount();void this.refreshAttempt();
+  if(this.user())void this.refreshAccount();void this.refreshAttempt();void this.refreshLeaderboard();
  }
 
  private disposeGameViews(){

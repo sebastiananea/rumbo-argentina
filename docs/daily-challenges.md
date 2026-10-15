@@ -52,3 +52,15 @@ El desafío conserva IDs de panorama y las coordenadas/etiquetas originales del 
 ## Verificación de esta entrega
 
 Las pruebas ejecutan la migración nueva en PostgreSQL embebido y comprueban permisos, lotes atómicos de cinco, igualdad entre usuarios e invitados, fecha argentina, leases, fallback, snapshots e historial. El selector se prueba con cobertura y fallos simulados. El script real de preparación y el flujo de navegador se verifican con respuestas simuladas de proveedores, no con el proyecto remoto ni una cuenta real de Google. La activación descrita arriba sigue siendo necesaria.
+
+## Participantes y top 5 diario
+
+Para un proyecto que ya tiene las migraciones 001–004, ejecutar una sola vez **solo** `supabase/migrations/202610150005_daily_leaderboard.sql` en Supabase → SQL Editor. En un proyecto nuevo, aplicar también 005 después de 004. No requiere nuevas claves ni cambios en el preparador.
+
+`games` ya es el registro privado de participación: cuenta, día del desafío, estado y puntaje calculado por el servidor. Se cuentan cuentas distintas que iniciaron el desafío, incluidas partidas en curso o abandonadas; el ranking incluye únicamente partidas completadas con cuenta. Los invitados no tienen una identidad verificable y no participan del ranking público.
+
+La función `get_daily_leaderboard()` se puede consultar con o sin sesión. Usa la fecha de Argentina del servidor, devuelve los totales de participantes y finalizaciones, y como máximo cinco entradas con posición, nombre público, puntaje y una marca del usuario actual. No publica IDs de cuentas, correos, coordenadas ni los historiales de otros jugadores. La interfaz escapa los nombres como texto. Los nombres de perfil aparecen públicamente en el top.
+
+Se ordena por puntaje descendente; en empate, por hora de finalización, creación e ID interno para mantener un orden estable. Si hay intentos repetidos de versiones anteriores, se usa el primero completado por cuenta; no se elige su mejor repetición. Los registros existentes se incorporan automáticamente sin duplicar datos. Una partida terminada después de medianoche conserva el día del desafío que estaba jugando.
+
+El inicio muestra el top, permite actualizarlo y lo consulta cada minuto mientras está visible. Volver al inicio después de jugar vuelve a consultar el ranking. Un fallo al consultarlo no impide jugar. Los historiales privados mantienen sus políticas de acceso; no se habilitan escrituras públicas.
