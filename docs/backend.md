@@ -16,6 +16,7 @@ No incluye multijugador ni pagos.
    - `supabase/migrations/202610130002_catalog_candidates.sql`
    - `supabase/migrations/202610130003_daily_challenges.sql` y `supabase/migrations/202610140004_daily_attempt.sql`
    - `supabase/migrations/202610150005_daily_leaderboard.sql`
+   - `supabase/migrations/202610150006_personal_daily_rank.sql`
    Estas migraciones iniciales se aplican una sola vez. Con Supabase CLI también pueden aplicarse con `supabase db push` después de vincular el proyecto.
 3. En los ajustes de API obtener la URL del proyecto y la clave **publishable** (o la antigua clave pública **anon**). Configurar en Vercel `SUPABASE_URL` y `SUPABASE_PUBLISHABLE_KEY`, además de la `GOOGLE_MAPS_API_KEY` existente. Volver a desplegar: las tres variables se incorporan al frontend durante el build. Las claves públicas son públicas; jamás usar `service_role` o `sb_secret_...` en `SUPABASE_PUBLISHABLE_KEY`.
 4. En **Authentication → URL Configuration**, definir la URL pública de Vercel como **Site URL** y permitir los redirects de ese dominio y `http://localhost:4200/` para desarrollo. Registrar explícitamente los dominios de Preview que se vayan a utilizar. Habilitar el proveedor **Email**, mantener la confirmación de correo y exigir contraseñas de al menos ocho caracteres. Para uso público configurar SMTP propio y revisar los límites de envío de Supabase; el correo de pruebas del proveedor no es un servicio de producción.

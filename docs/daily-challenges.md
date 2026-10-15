@@ -64,3 +64,9 @@ La función `get_daily_leaderboard()` se puede consultar con o sin sesión. Usa 
 Se ordena por puntaje descendente; en empate, por hora de finalización, creación e ID interno para mantener un orden estable. Si hay intentos repetidos de versiones anteriores, se usa el primero completado por cuenta; no se elige su mejor repetición. Los registros existentes se incorporan automáticamente sin duplicar datos. Una partida terminada después de medianoche conserva el día del desafío que estaba jugando.
 
 El inicio muestra el top, permite actualizarlo y lo consulta cada minuto mientras está visible. Volver al inicio después de jugar vuelve a consultar el ranking. Un fallo al consultarlo no impide jugar. Los historiales privados mantienen sus políticas de acceso; no se habilitan escrituras públicas.
+
+## Inicio del jugador y posición personal
+
+Con sesión, el inicio prioriza la tarjeta del desafío y el top 5 en dos columnas (una columna en móvil), seguidos del historial con puntajes destacados. Sin sesión, se conserva una introducción breve y el top sigue disponible antes de jugar. Consultar el panel no carga mapas ni Street View.
+
+Aplicar una sola vez `supabase/migrations/202610150006_personal_daily_rank.sql`, después de 005, para consultar la posición propia incluso fuera del top 5. La función devuelve `me` solo para la cuenta autenticada que la consulta; para invitados es `null`. No amplía el listado público de cinco personas. La posición aparece junto al puntaje de hoy, fuera del top si corresponde, y en el resultado final. La interfaz sigue mostrando el top si todavía no se aplicó esta actualización, pero no puede informar la posición personal fuera de él.

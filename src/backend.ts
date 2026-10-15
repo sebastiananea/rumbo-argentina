@@ -9,7 +9,7 @@ export interface GameHistory {
  id:string; daily_day:string|null; status:'playing'|'completed'|'abandoned'; total:number; created_at:string;
  game_rounds:{round_index:number; name:string; status:string; distance:number|null; points:number; timed_out:boolean}[];
 }
-export interface DailyLeaderboard {day:string;participants:number;completed:number;entries:{position:number;name:string;points:number;mine:boolean}[]}
+export interface DailyLeaderboard {day:string;participants:number;completed:number;me?:{position:number;name:string;points:number}|null;entries:{position:number;name:string;points:number;mine:boolean}[]}
 export interface SavedRound extends RoundResult {finished:boolean; total:number}
 
 export class Backend {
