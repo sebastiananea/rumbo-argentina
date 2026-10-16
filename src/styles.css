@@ -74,3 +74,23 @@
 input{background:var(--surface,#fff);color:var(--text,#203b3b)}input::placeholder{color:var(--muted,#63776e)}
 :root[data-theme=dark] .leaflet-bar a,:root[data-theme=dark] .leaflet-control-attribution,:root[data-theme=dark] .leaflet-tooltip{background:var(--surface);color:var(--text);border-color:var(--border)}:root[data-theme=dark] .leaflet-bar a:hover{background:var(--soft)}:root[data-theme=dark] .leaflet-control-attribution a{color:var(--accent)}
 @media(max-width:550px){header:has(.account-actions){column-gap:10px}.theme-toggle{padding:8px 10px}header .theme-toggle{font-size:11px}}
+
+/* Touch game layout: compact HUD and an explicit map sheet. */
+.mobile-map-launcher{display:none}
+.playing .gamehud{justify-content:initial;align-items:center;gap:10px}.playing .gamehud .round-info{margin-right:auto;display:flex;flex-direction:column;gap:3px;padding:10px 16px;background:var(--overlay,#fffffff2);border-radius:12px;color:var(--text,#234b45);box-shadow:0 3px 20px #183a3420;pointer-events:auto}.round-info strong{font-size:14px}.round-info small{font-size:12px;color:var(--muted,#63776e)}.playing .gamehud .hud-icon{height:46px;min-width:46px;padding:0;display:grid;place-items:center;margin:0}.playing .gamehud .hud-icon span{padding:0;background:none;box-shadow:none;font-size:22px;pointer-events:none}.playing .gamehud .timer{min-height:46px;display:grid;place-items:center;margin:0}.playing .viewfooter{top:94px}.playing .viewfooter>span{display:none}
+@media(max-width:750px),(max-height:500px){
+ .playing .gamehud{top:max(10px,env(safe-area-inset-top));left:max(10px,env(safe-area-inset-left));right:max(10px,env(safe-area-inset-right));gap:6px;flex-wrap:nowrap}
+ .playing .gamehud .round-info{padding:8px 12px;min-width:0;min-height:48px;justify-content:center}.round-info strong{font-size:12px;white-space:nowrap}.round-info small{font-size:11px}
+ .playing .gamehud .timer{min-width:64px;padding:8px;font-size:19px;min-height:48px}.playing .gamehud .hud-icon{width:44px;min-width:44px;height:48px;margin:0}.playing .gamehud .hud-icon span{font-size:22px}
+ .playing .viewfooter{top:calc(max(10px,env(safe-area-inset-top)) + 58px);left:max(10px,env(safe-area-inset-left));padding:0;border-radius:9px;font-size:12px;gap:0}.playing .viewfooter button{min-height:44px;padding:10px 12px;font-size:12px}
+ .playing .mapcard{left:max(10px,env(safe-area-inset-left));right:max(10px,env(safe-area-inset-right));bottom:calc(44px + env(safe-area-inset-bottom));width:auto;height:min(64dvh,520px);max-height:calc(100dvh - 166px);transition:none;border-radius:18px;box-shadow:0 8px 35px #183a3440}
+ .playing .mapcard:not(.expanded){visibility:hidden;pointer-events:none}
+ .playing .mapcard.expanded{width:auto;height:min(64dvh,520px);max-height:calc(100dvh - 166px)}
+ .playing .mapcard .panelbar{min-height:48px;height:48px;padding:0 14px}.playing .mapcard .maptoggle{min-height:44px;padding:10px;font-size:12px}.playing .mapcard .map-timer{display:none}.playing #map{min-height:60px}
+ .playing .mapfooter{padding:10px 14px 12px}.playing .mapfooter p,.playing .mapcard.expanded .mapfooter p{display:block;margin:0 0 8px;font-size:12px;line-height:1.4}.playing .mapfooter button{min-height:46px;font-size:14px}
+ .playing .mobile-map-launcher{position:absolute;left:max(10px,env(safe-area-inset-left));right:max(10px,env(safe-area-inset-right));bottom:calc(44px + env(safe-area-inset-bottom));min-height:52px;display:flex;align-items:center;justify-content:center;gap:12px;z-index:7;border-radius:14px;font-size:15px;box-shadow:0 4px 20px #183a3440}.mobile-map-launcher>span{font-size:22px}
+ .playing .error{top:126px;max-height:calc(100dvh - 220px);overflow:auto}.playing .practice{padding:120px 24px 140px}.playing .practice button{min-height:44px}
+}
+@media(max-height:500px){.playing .viewfooter{top:calc(max(10px,env(safe-area-inset-top)) + 56px)}.playing .mapcard.expanded{max-height:calc(100dvh - 112px);height:calc(100dvh - 112px)}.playing .mapfooter p{display:none!important}}
+
+@media(max-width:750px),(max-height:500px){.playing:has(.mapcard.expanded) .viewfooter{visibility:hidden}}
