@@ -67,3 +67,9 @@ El preparador prioriza candidatos no usados en los últimos siete días, puntos 
 `npm test` ejecuta las pruebas del juego, la búsqueda de panoramas y las migraciones/funciones/RLS en PostgreSQL embebido con PGlite. Los roles y `auth.uid()` de Supabase se simulan en la prueba, mientras que la transacción, las restricciones y las políticas SQL se ejecutan realmente. No requiere Docker ni un proyecto remoto.
 
 `npm run build` verifica tipos y plantillas. Si este entorno bloquea Google Fonts, usar el workspace auxiliar documentado en `/workspace/.rumbo-dev`, sin alterar la lógica del backend. El navegador se valida con respuestas de Auth, API y Google simuladas mientras no existe un proyecto de Supabase conectado.
+
+## Corregir nombres de Google
+
+Si ya están aplicadas las migraciones anteriores, ejecutar una sola vez `supabase/migrations/202610160007_google_profile_names.sql` en SQL Editor. Para instalaciones nuevas, aplicarla después de 006.
+
+Los perfiles nuevos usan `display_name`, luego `full_name` y después `name`, omitiendo valores vacíos. Solo si falta un nombre se utiliza «Jugador»; nunca se usa el correo como nombre público. La actualización también repara perfiles existentes llamados exactamente «Jugador» cuando hay un nombre en los metadatos. Conserva los demás nombres personalizados, las cuentas, partidas y puntajes. Los nombres se recortan al límite de 50 caracteres. El ranking consulta el perfil actualizado; basta volver a cargar la aplicación o actualizar el ranking después de ejecutar el SQL. No requiere cambiar claves ni volver a autenticar a los usuarios.
