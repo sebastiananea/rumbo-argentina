@@ -27,3 +27,7 @@ Haversine, radio terrestre medio de 6371.0088 km. `round(5000 * exp(-distanciaKm
 
 ## Verificación y límites
 `npm test` cubre cálculo geográfico, antipodal, puntajes, selección sin repetición, ciclo completo de partida, límite de tiempo, apuestas tardías y rondas agotadas. También ejecuta las migraciones y verifica aislamiento entre usuarios, privilegios administrativos, plazos, puntajes e idempotencia del backend. `npm run build` valida plantillas y tipos Angular. Para verificar imágenes, controles y autorización real de Google hace falta configurar una clave propia en el entorno. El mapa requiere conexión a servidores de OpenStreetMap. Las coordenadas del catálogo siguen disponibles para el navegador: esta etapa no evita todas las trampas. Ver los límites de confianza y almacenamiento en la guía del backend.
+
+### Música del juego
+
+El modo juego incluye una melodía ambiental original generada con Web Audio (`src/music.ts`), sin grabaciones, samples ni música de terceros. La composición y su implementación se ofrecen bajo CC0 1.0: https://creativecommons.org/publicdomain/zero/1.0/ . No requieren atribución. Suena a volumen suave tras pulsar Jugar, se detiene en resultados, al salir y al ocultar la pestaña. El botón «Música» permite silenciarla y recuerda esa preferencia en el navegador. No requiere claves, descargas ni servicios externos.

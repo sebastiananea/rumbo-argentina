@@ -1,3 +1,4 @@
+import {GameMusic} from './music';
 import {bootstrapApplication} from '@angular/platform-browser';
 import {Component,OnDestroy,NgZone,ChangeDetectorRef,signal} from '@angular/core';
 import * as L from 'leaflet';
@@ -63,7 +64,7 @@ import {GOOGLE_MAPS_API_KEY} from './google-maps-config';
 @if(error()){<div class="error" role="alert">{{error()}}@if(roundSaveFailed()){<button (click)="submit()" [disabled]="submitting()">Reintentar guardar ronda</button>}</div>}
 @if(game.revealed&&!finalResults()){<section class="round-result" aria-labelledby="round-result-title"><p class="eyebrow">RONDA {{game.index+1}} DE 5 · {{game.results[game.index].timedOut?'TIEMPO AGOTADO':'UBICACIÓN CONFIRMADA'}}</p><h1 id="round-result-title" tabindex="-1">{{game.results[game.index].name}}</h1><p class="round-score">+{{game.results[game.index].points.toLocaleString('es-AR')}}<span>puntos de esta ronda / 5.000</span></p><p>@if(game.results[game.index].timedOut){Se terminaron los 2 minutos. Esta ronda suma 0 puntos.}@else{Tu apuesta quedó a <strong>{{formatDistance(game.results[game.index].distance)}}</strong> del punto de inicio.}</p><p class="result-total">Acumulado: {{game.total.toLocaleString('es-AR')}} / 25.000 puntos</p><button (click)="game.finished?showFinalResults():next()">{{game.finished?'Ver resultado final →':'Siguiente ronda →'}}</button>@if(!game.finished){<button class="quiet" (click)="goHome()">Continuar más tarde</button>}</section>}
 @if(!finalResults()){
-<div class="workspace" [class.round-revealed]="game.revealed" [hidden]="finalResults()"><div class="gamehud"><span>{{gameDay()?formatDay(gameDay()!)+' · ':''}}Ronda {{game.index+1}} / 5 · {{game.total.toLocaleString('es-AR')}} puntos</span><span class="timer" [class.urgent]="remaining()<=20 && !game.revealed" role="timer" aria-label="Tiempo restante">{{busy() ? 'Cargando…' : timeLabel()}}</span><button (click)="goHome()">Volver al inicio ✕</button></div><section class="explore"><div class="panelbar"><span class="live">● {{connected()?'STREET VIEW':busy()?'CARGANDO STREET VIEW':'STREET VIEW NO DISPONIBLE'}}</span><span>Single player</span></div><div class="viewer" id="panorama" [class.inactive]="!connected()"></div>
+<div class="workspace" [class.round-revealed]="game.revealed" [hidden]="finalResults()"><div class="gamehud"><span>{{gameDay()?formatDay(gameDay()!)+' · ':''}}Ronda {{game.index+1}} / 5 · {{game.total.toLocaleString('es-AR')}} puntos</span><span class="timer" [class.urgent]="remaining()<=20 && !game.revealed" role="timer" aria-label="Tiempo restante">{{busy() ? 'Cargando…' : timeLabel()}}</span><button class="music-toggle" (click)="toggleMusic()" [attr.aria-pressed]="!musicMuted()" [attr.aria-label]="musicMuted()?'Activar música':'Silenciar música'">{{musicMuted()?'♫ Música: no':'♫ Música: sí'}}</button><button (click)="goHome()">Volver al inicio ✕</button></div><section class="explore"><div class="panelbar"><span class="live">● {{connected()?'STREET VIEW':busy()?'CARGANDO STREET VIEW':'STREET VIEW NO DISPONIBLE'}}</span><span>Single player</span></div><div class="viewer" id="panorama" [class.inactive]="!connected()"></div>
 @if(!connected()){<div class="practice"><span class="compass">◈</span><p class="eyebrow">EXPLORÁ ARGENTINA</p><h2>Street View no está disponible</h2><p>Se necesita una conexión válida con Google Maps para jugar.</p><button (click)="begin()" [disabled]="busy()">Reintentar</button><button class="quiet" (click)="goHome()">Volver al inicio</button></div>}
 @if(busy()){<div class="loading" role="status">Buscando un panorama…</div>}
 <div class="viewfooter"><span>{{game.revealed?game.rounds[game.index].name:'Encontrá tu rumbo'}}</span><button class="quiet" (click)="resetView()" [disabled]="!connected()||busy()">↺ Volver al inicio</button></div></section>
@@ -73,6 +74,9 @@ import {GOOGLE_MAPS_API_KEY} from './google-maps-config';
 }
 <footer><span>De la Puna a la Patagonia.</span><span>5 rondas · 2 minutos por ronda</span></footer></main>`})
 class App implements OnDestroy {
+ private readonly music=new GameMusic();
+ musicMuted=signal(this.music.muted);
+ toggleMusic(){this.music.toggle();this.musicMuted.set(this.music.muted);}
  darkMode=signal(document.documentElement.dataset['theme']==='dark');
  private themePreference:string|null=null;
  private readonly colorScheme=window.matchMedia('(prefers-color-scheme: dark)');
@@ -248,7 +252,7 @@ class App implements OnDestroy {
  private initializeMap(){this.map=L.map('map').setView([-38.5,-64],4);L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',maxZoom:19}).addTo(this.map);this.pins.addTo(this.map);this.map.on('click',(e:L.LeafletMouseEvent)=>this.zone.run(()=>{if(this.game.revealed||this.busy()||this.submitting()||this.roundSaveFailed()||this.checkTime())return;this.game.guess={lat:e.latlng.lat,lng:e.latlng.lng};this.draw();this.cdr.markForCheck();}));this.game.target=null;this.resizeObserver=new ResizeObserver(()=>{this.map.invalidateSize({pan:false});if(this.game.revealed)this.draw();if(this.panorama)google.maps.event.trigger(this.panorama,'resize');});this.resizeObserver.observe(document.getElementById('map')!);this.resizeObserver.observe(document.getElementById('panorama')!);}
  begin(){
   if(this.busy()||this.authBusy()||this.catalogChecking()||this.game.revealed||this.attemptLoading()||this.completedDaily()||this.dailyAttempt()?.status==='abandoned'||(this.user()&&this.attemptError()))return;
-  this.accountOpen.set(false);
+  this.music.unlock();this.accountOpen.set(false);
   if(!this.started()){this.started.set(true);this.cdr.detectChanges();this.initializeMap();}
   this.playing.set(true);this.mapExpanded.set(false);document.body.style.overflow='hidden';
   if(this.connected())return;
@@ -280,8 +284,8 @@ class App implements OnDestroy {
  private focusResult(id:string){window.scrollTo(0,0);document.getElementById(id)?.focus({preventScroll:true});}
  showFinalResults(){if(!this.game.finished)return;this.disposeGameViews();this.finalResults.set(true);this.cdr.detectChanges();this.focusResult('final-title');}
 
- leave(){this.playing.set(false);document.body.style.overflow='';}
- async connect(key:string){if(this.busy()||this.connected())return;this.authFailed=false;this.busy.set(true);this.error.set('');try{await this.loadGoogle(key);if(this.authFailed)throw new Error('auth');if(this.destroyed)return;this.service=new google.maps.StreetViewService();this.panorama=new google.maps.StreetViewPanorama(document.getElementById('panorama')!,{addressControl:false,showRoadLabels:false,linksControl:true,fullscreenControl:false,enableCloseButton:false,motionTracking:false});await this.prepareGame();this.connected.set(true);this.clear();await this.loadRound();if(this.connected()&&!this.game.revealed){this.playing.set(true);document.body.style.overflow='hidden';}}catch(problem){this.error.set(problem instanceof Error&&this.backend.client&&this.user()&&!this.connected()?problem.message:this.authFailed?'Google rechazó la clave. Revisá Maps JavaScript API, facturación y dominios autorizados.':'No se pudo iniciar Google Maps. Revisá GOOGLE_MAPS_API_KEY, las restricciones de la clave, la facturación y tu conexión.');this.stopTimer();this.connected.set(false);this.game.target=null;}finally{this.busy.set(false);}}
+ leave(){this.music.stop();this.playing.set(false);document.body.style.overflow='';}
+ async connect(key:string){if(this.busy()||this.connected())return;this.authFailed=false;this.busy.set(true);this.error.set('');try{await this.loadGoogle(key);if(this.authFailed)throw new Error('auth');if(this.destroyed)return;this.service=new google.maps.StreetViewService();this.panorama=new google.maps.StreetViewPanorama(document.getElementById('panorama')!,{addressControl:false,showRoadLabels:false,linksControl:true,fullscreenControl:false,enableCloseButton:false,motionTracking:false});await this.prepareGame();this.connected.set(true);this.clear();await this.loadRound();if(this.connected()&&!this.game.revealed){this.playing.set(true);document.body.style.overflow='hidden';}}catch(problem){this.error.set(problem instanceof Error&&this.backend.client&&this.user()&&!this.connected()?problem.message:this.authFailed?'Google rechazó la clave. Revisá Maps JavaScript API, facturación y dominios autorizados.':'No se pudo iniciar Google Maps. Revisá GOOGLE_MAPS_API_KEY, las restricciones de la clave, la facturación y tu conexión.');this.stopTimer();this.music.stop();this.connected.set(false);this.game.target=null;}finally{this.busy.set(false);}}
  private loadGoogle(key:string):Promise<void>{if(window.google?.maps)return Promise.resolve();return new Promise((resolve,reject)=>{let settled=false;const finish=(err?:Error)=>{if(settled)return;settled=true;clearTimeout(timer);delete (window as any).__rumboMaps;if(err){this.script?.remove();reject(err);}else resolve();};const timer=setTimeout(()=>finish(new Error('timeout')),20000);(window as any).__rumboMaps=()=>finish();(window as any).gm_authFailure=()=>this.zone.run(()=>{this.authFailed=true;this.stopTimer();this.connected.set(false);this.game.target=null;this.busy.set(false);this.leave();finish(new Error('auth'));if(settled)this.error.set('Google rechazó la clave. Revisá Maps JavaScript API, facturación y dominios autorizados.');});this.script=document.createElement('script');this.script.src='https://maps.googleapis.com/maps/api/js?key='+encodeURIComponent(key)+'&callback=__rumboMaps&loading=async&v=quarterly&language=es&region=AR';this.script.onerror=()=>finish(new Error('network'));document.head.appendChild(this.script);});}
  async loadRound(){
   this.stopTimer();this.remaining.set(120);
@@ -310,7 +314,7 @@ class App implements OnDestroy {
    this.game.target=found.target;this.startPano=found.pano;
    this.panorama!.setPano(this.startPano);
    this.panorama!.setPov({heading:Math.random()*360,pitch:0});
-   this.panorama!.setVisible(true);this.startTimer();
+   this.panorama!.setVisible(true);this.startTimer();this.music.start();
   }catch{
    if(!isCurrent())return;
    this.error.set('No se pudo cargar esta ubicación del desafío diario. Volvé a intentar en unos momentos.');
@@ -337,8 +341,8 @@ class App implements OnDestroy {
   }finally{this.submitting.set(false);}
  }
  clear(){this.pins.clearLayers();this.map.setView([-38.5,-64],4);}
- next(){if(!this.game.revealed||this.game.finished)return;this.mapExpanded.set(false);this.game.next();this.playing.set(true);document.body.style.overflow='hidden';this.cdr.detectChanges();this.map.invalidateSize({pan:false});this.clear();if(this.connected())void this.loadRound();else this.game.target=null;}
+ next(){if(!this.game.revealed||this.game.finished)return;this.music.unlock();this.mapExpanded.set(false);this.game.next();this.playing.set(true);document.body.style.overflow='hidden';this.cdr.detectChanges();this.map.invalidateSize({pan:false});this.clear();if(this.connected())void this.loadRound();else this.game.target=null;}
  formatDistance(km:number|null){if(km===null)return 'Sin apuesta';return km<1?Math.round(km*1000)+' m':km.toLocaleString('es-AR',{maximumFractionDigits:1})+' km';}
- ngOnDestroy(){this.colorScheme.removeEventListener('change',this.onColorSchemeChange);window.removeEventListener('storage',this.onThemeStorage);this.authSubscription?.unsubscribe();if(this.dailyRefreshTimer)clearInterval(this.dailyRefreshTimer);this.stopTimer();this.destroyed=true;this.resizeObserver?.disconnect();document.body.style.overflow='';this.request++;this.map?.remove();this.panorama?.setVisible(false);if(this.panorama)google.maps.event.clearInstanceListeners(this.panorama);delete (window as any).gm_authFailure;}
+ ngOnDestroy(){this.music.dispose();this.colorScheme.removeEventListener('change',this.onColorSchemeChange);window.removeEventListener('storage',this.onThemeStorage);this.authSubscription?.unsubscribe();if(this.dailyRefreshTimer)clearInterval(this.dailyRefreshTimer);this.stopTimer();this.destroyed=true;this.resizeObserver?.disconnect();document.body.style.overflow='';this.request++;this.map?.remove();this.panorama?.setVisible(false);if(this.panorama)google.maps.event.clearInstanceListeners(this.panorama);delete (window as any).gm_authFailure;}
 }
 bootstrapApplication(App).catch(console.error);
