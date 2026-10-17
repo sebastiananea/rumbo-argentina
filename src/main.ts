@@ -63,7 +63,7 @@ import {GOOGLE_MAPS_API_KEY} from './google-maps-config';
 }
 @if(game.revealed&&!finalResults()){<p class="map-legend"><span>● Tu apuesta</span><span>● Ubicación real</span></p>}
 }
-<footer><span>De la Puna a la Patagonia.</span><span>5 rondas · 2 minutos por ronda</span></footer></main>`})
+<footer><span>De la Puna a la Patagonia.</span><a href="https://www.geonames.org/" target="_blank" rel="noopener noreferrer">Datos: GeoNames · CC BY 4.0</a><span>5 rondas · 2 minutos por ronda</span></footer></main>`})
 class App implements OnDestroy {
  roomActive=signal(false);
  private googleSession=signal(false);

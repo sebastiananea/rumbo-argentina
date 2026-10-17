@@ -1,0 +1,43 @@
+name: Ampliar y validar catálogo
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Cantidad mínima de panoramas distintos verificados
+        type: choice
+        options: ['500', '750', '1000']
+        default: '500'
+  schedule:
+    # 00:30 Argentina: top up the bank and renew IDs older than 28 days.
+    - cron: '30 3 * * *'
+permissions:
+  contents: read
+concurrency:
+  group: rumbo-catalog-validation
+  cancel-in-progress: false
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+      RUMBO_SITE_URL: ${{ vars.RUMBO_SITE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
+      CATALOG_TARGET: ${{ inputs.target || '500' }}
+      CATALOG_MAX_ATTEMPTS: '1200'
+    steps:
+      - name: Comprobar configuración
+        run: |
+          test -n "$SUPABASE_URL" && test -n "$RUMBO_SITE_URL" && test -n "$SUPABASE_SERVICE_ROLE_KEY" && test -n "$GOOGLE_MAPS_API_KEY" || { echo 'Faltan variables o secretos del catálogo.'; exit 1; }
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Instalar dependencias y navegador
+        run: |
+          npm ci --no-audit --no-fund
+          npx playwright install --with-deps chromium
+      - name: Guardar al menos 500 puntos navegables
+        run: node --experimental-strip-types scripts/validate-catalog.mjs
