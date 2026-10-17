@@ -1,17 +1,18 @@
 # Rumbo · GeoGuessr Argentina
-MVP single player con Angular 22, TypeScript y Leaflet. Pantalla de inicio, desafío diario compartido con cinco rondas de dos minutos, selección de ubicación, resultados y resumen final responsive. Backend opcional con Supabase para cuentas, catálogo e historial privado. Sin multijugador ni suscripciones.
+Juego con desafío diario y salas privadas, construido con Angular 22, TypeScript y Leaflet. Pantalla de inicio, desafío diario compartido con cinco rondas de dos minutos, selección de ubicación, resultados y resumen final responsive. Backend en Supabase para acceso obligatorio con Google, catálogo, historial privado y salas de hasta ocho amigos. Sin suscripciones.
 
 ## Ejecutar
 Node 24.15 o superior (24.x). `npm ci`, `npm start`. Producción: `npm run build`. Pruebas: `npm test`.
 
 ## Cuentas, catálogo e historial
-La integración incluye registro, ingreso con Google o correo, recuperación de contraseña, catálogo validable, desafío diario compartido e historial privado. Para activarla hace falta crear un proyecto propio de Supabase y configurar sus variables públicas en Vercel. Seguir [la guía del backend](docs/backend.md), que incluye las migraciones, el administrador de catálogo, la importación de nuevos puntos y la verificación real. Sin Supabase, el juego continúa como invitado y no guarda partidas.
+Para jugar se requiere ingresar con Google. El inicio y el top diario se pueden consultar sin cuenta. Configurar Supabase siguiendo [la guía del backend](docs/backend.md). Para actualizar un proyecto existente con Google obligatorio y salas, aplicar las migraciones 008 y 009 y deshabilitar Email en Auth: [instrucciones](docs/friend-rooms.md). Sin Supabase configurado no se habilita el juego.
+
 
 ## Desafío diario
 Todos reciben las mismas cinco ubicaciones y el mismo orden durante el día de Argentina. El preparador de GitHub Actions valida y publica el siguiente desafío antes de medianoche; si falla se mantiene el último disponible durante todo el día, sin cambios a mitad de partida. No hace falta ser administrador ni validar puntos para jugar. Cada cuenta tiene un único intento por día; puede continuarlo si sale y consultar el puntaje al terminar. El inicio muestra los participantes y los cinco mejores puntajes del día entre cuentas que completaron el desafío. Para actualizar el proyecto existente, aplicar las migraciones pendientes y configurar el preparador: [instrucciones de activación](docs/daily-challenges.md).
 
 ## Cómo jugar
-La pantalla de inicio muestra las reglas y el botón **Jugar**. El mapa y Street View se inicializan recién al pulsarlo. Cada ronda dispone de **2 minutos**, contados desde que se obtiene el panorama, sin descontar el tiempo de carga. Hay que marcar y confirmar una ubicación antes del límite: si se agota el tiempo, la ronda termina con **0 puntos**, incluso si había una apuesta marcada sin confirmar. El reloj sigue corriendo al salir de la vista de juego o cambiar de pestaña. Se puede avanzar a la siguiente ronda o volver a jugar después del resumen final.
+La pantalla de inicio muestra las reglas y el botón **Jugar**. El mapa y Street View se inicializan recién al pulsarlo. Cada ronda dispone de **2 minutos**, contados desde que se obtiene el panorama, sin descontar el tiempo de carga. Hay que marcar y confirmar una ubicación antes del límite: si se agota el tiempo, la ronda termina con **0 puntos**, incluso si había una apuesta marcada sin confirmar. El reloj sigue corriendo al salir de la vista de juego o cambiar de pestaña. El desafío diario permite un intento por cuenta. A 15 segundos del final, el cronómetro parpadea en rojo (sin animación si se prefiere movimiento reducido). Las salas privadas permiten partidas independientes con anfitrión y plazo compartido; los resultados se revelan cuando todos respondieron o termina el tiempo.
 
 ## Street View
 En Google Cloud habilitar **Maps JavaScript API** y facturación. Crear una clave de navegador y configurarla en Vercel como variable de entorno `GOOGLE_MAPS_API_KEY`, disponible para el entorno de producción (y Preview si corresponde). Después de agregar o cambiar la variable, volver a desplegar para que Angular la incluya en el build. Localmente, se puede definir esa misma variable antes de `npm start` o `npm run build`.

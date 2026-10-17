@@ -1,5 +1,7 @@
 # Activar el desafío diario compartido
 
+Desde la migración 008, jugar requiere Google. La activación actual de acceso y salas está en [esta guía](friend-rooms.md); aplicar las migraciones pendientes en orden. Los visitantes solo consultan el inicio y el ranking.
+
 ## Qué cambia
 
 Todos juegan las mismas cinco ubicaciones, con el mismo orden y los mismos IDs de panorama. La fecha se calcula en PostgreSQL usando `America/Argentina/Buenos_Aires`. Las partidas registradas guardan el día y el ID del desafío; Cada cuenta tiene un único intento por día. Una partida en curso se retoma con sus rondas y plazos originales; al completar el desafío solo se puede consultar el resultado.
@@ -28,7 +30,7 @@ Después:
 1. Confirmar que el despliegue de `main` terminó y que `RUMBO_SITE_URL` abre la aplicación sin una pantalla de protección de Vercel. El navegador automatizado debe poder acceder al dominio público.
 2. En GitHub → Actions → **Preparar desafío diario**, pulsar **Run workflow**, elegir `main` y dejar `target: today`.
 3. Esperar que termine correctamente. El mensaje `Published five navigable locations for ...` confirma la publicación en Supabase; la ejecución omitida por falta de configuración no la confirma.
-4. Abrir el juego y pulsar **Volver a consultar** si aún mostraba preparación. Debe aparecer el desafío y quedar habilitado **Jugar** tanto para invitados como para cuentas.
+4. Abrir el juego y pulsar **Volver a consultar** si aún mostraba preparación. Debe aparecer el desafío y quedar habilitado **Jugar** para cuentas que ingresaron con Google.
 5. Probar con dos navegadores/cuentas: deben recibir los mismos lugares. Jugar cinco rondas con cuenta y verificar el historial.
 
 Sin la migración, secretos y primera publicación, esta entrega no puede llamarse activa en producción. Conectar GitHub a Supabase no configura automáticamente los Secrets de Actions ni aplica necesariamente las migraciones.
@@ -37,7 +39,7 @@ Sin la migración, secretos y primera publicación, esta entrega no puede llamar
 
 La tarea programada corre a las 22:00 y 23:00 de Argentina (01:00 y 02:00 UTC), preparando **el día siguiente**. La segunda ejecución omite el trabajo si el desafío ya está listo. Prepararlo antes de medianoche da margen ante retrasos de GitHub; GitHub Actions no garantiza una ejecución al segundo exacto.
 
-A medianoche, la API utiliza el desafío de la nueva fecha. Si no está listo, fija el último disponible para todo ese día. Una publicación tardía no cambia los cinco puntos después de que alguien recibió el desafío de esa fecha. Las partidas empezadas antes de medianoche conservan sus ubicaciones y su día hasta terminar. Al volver al inicio, la tarjeta muestra el resultado completado o permite continuar el intento en curso. El inicio y la consulta del puntaje no crean el mapa ni el visor Street View. Los invitados conservan su resultado en el navegador; sin cuenta no se puede impedir que otra persona juegue desde un navegador distinto o borrando sus datos locales.
+A medianoche, la API utiliza el desafío de la nueva fecha. Si no está listo, fija el último disponible para todo ese día. Una publicación tardía no cambia los cinco puntos después de que alguien recibió el desafío de esa fecha. Las partidas empezadas antes de medianoche conservan sus ubicaciones y su día hasta terminar. Al volver al inicio, la tarjeta muestra el resultado completado o permite continuar el intento en curso. El inicio y la consulta del puntaje no crean el mapa ni el visor Street View. No se ofrecen partidas de invitado; hace falta ingresar con Google.
 
 Un lease de diez minutos evita preparaciones concurrentes. Una falla libera el trabajo y establece una espera de diez minutos para reintentar; nunca reemplaza un desafío ya publicado. Las funciones de preparación solo pueden ejecutarse con la clave privada del servidor. Los jugadores únicamente consultan desafíos listos y escriben sus propias partidas mediante las funciones autenticadas.
 

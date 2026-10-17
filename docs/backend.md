@@ -2,11 +2,9 @@
 
 ## Arquitectura de esta entrega
 
-Angular usa Supabase Auth (correo/contraseña) y la API de Supabase. PostgreSQL expone funciones RPC para crear partidas, elegir ubicaciones, iniciar rondas y confirmar apuestas. Una tarea programada de GitHub prepara cinco panoramas compartidos por fecha argentina; el juego deja de sortear ciudades por usuario. Estas operaciones son transacciones: identifican al usuario por su sesión, bloquean la partida, controlan el plazo y calculan el puntaje. No hace falta desplegar otra API de Vercel en esta etapa. La interfaz queda en Vercel.
+Angular usa Supabase Auth con Google obligatorio y la API de Supabase. PostgreSQL expone funciones RPC para crear partidas, elegir ubicaciones, iniciar rondas y confirmar apuestas. Una tarea programada de GitHub prepara cinco panoramas compartidos por fecha argentina; el juego deja de sortear ciudades por usuario. Estas operaciones son transacciones: identifican al usuario por su sesión, bloquean la partida, controlan el plazo y calculan el puntaje. No hace falta desplegar otra API de Vercel en esta etapa. La interfaz queda en Vercel.
 
-Con Supabase, invitados y cuentas juegan el desafío publicado. Sin Supabase solo se ofrece una demostración local con candidatos deterministas por fecha, sin preparación compartida. Las partidas de invitado no se guardan ni se incorporan retroactivamente a una cuenta. Con cuenta, cada ronda se guarda antes de permitir avanzar y al terminar se muestra la confirmación del historial.
-
-No incluye multijugador ni pagos.
+Para jugar se exige una sesión de Google. Los visitantes pueden consultar la presentación y el ranking público, pero no jugar. El desafío individual conserva su intento diario e historial. Las salas privadas tienen una clasificación independiente: [activación y reglas](friend-rooms.md). No incluye pagos.
 
 ## Crear y conectar el proyecto
 
@@ -17,19 +15,22 @@ No incluye multijugador ni pagos.
    - `supabase/migrations/202610130003_daily_challenges.sql` y `supabase/migrations/202610140004_daily_attempt.sql`
    - `supabase/migrations/202610150005_daily_leaderboard.sql`
    - `supabase/migrations/202610150006_personal_daily_rank.sql`
+   - `supabase/migrations/202610160007_google_profile_names.sql`
+   - `supabase/migrations/202610170008_google_login.sql`
+   - `supabase/migrations/202610170009_friend_rooms.sql`
    Estas migraciones iniciales se aplican una sola vez. Con Supabase CLI también pueden aplicarse con `supabase db push` después de vincular el proyecto.
 3. En los ajustes de API obtener la URL del proyecto y la clave **publishable** (o la antigua clave pública **anon**). Configurar en Vercel `SUPABASE_URL` y `SUPABASE_PUBLISHABLE_KEY`, además de la `GOOGLE_MAPS_API_KEY` existente. Volver a desplegar: las tres variables se incorporan al frontend durante el build. Las claves públicas son públicas; jamás usar `service_role` o `sb_secret_...` en `SUPABASE_PUBLISHABLE_KEY`.
-4. En **Authentication → URL Configuration**, definir la URL pública de Vercel como **Site URL** y permitir los redirects de ese dominio y `http://localhost:4200/` para desarrollo. Registrar explícitamente los dominios de Preview que se vayan a utilizar. Habilitar el proveedor **Email**, mantener la confirmación de correo y exigir contraseñas de al menos ocho caracteres. Para uso público configurar SMTP propio y revisar los límites de envío de Supabase; el correo de pruebas del proveedor no es un servicio de producción.
+4. En **Authentication → URL Configuration**, definir la URL pública de Vercel como **Site URL** y permitir los redirects de ese dominio y `http://localhost:4200/` para desarrollo. Registrar explícitamente los dominios de Preview que se vayan a utilizar. Habilitar Google y deshabilitar Email y los otros proveedores. Ver [la configuración de acceso y salas](friend-rooms.md).
 5. Configurar el preparador automático según [la guía de desafíos diarios](daily-challenges.md): dos variables y dos secretos privados en GitHub Actions. Ejecutar **Preparar desafío diario → Run workflow → today** para generar el primer desafío. Es una tarea del dueño del proyecto; ningún jugador necesita ser administrador o validar lotes.
-6. Registrar una cuenta o ingresar con Google y jugar. Invitados y cuentas reciben las mismas cinco ubicaciones; solo las cuentas guardan historial. El reloj empieza al cargar el panorama de cada ronda.
+6. Ingresar con Google y jugar. Todos los jugadores reciben las mismas cinco ubicaciones y guardan historial. El reloj empieza al cargar el panorama de cada ronda.
 7. Habilitar **Supabase Cron** y ejecutar `supabase/maintenance.sql` una vez. Limpia cada hora las coordenadas temporales de panoramas de partidas abandonadas durante más de un día. Las coordenadas también se eliminan al confirmar la ronda o reemplazar una partida en curso.
-8. Validar en el proyecto real: crear dos cuentas, jugar cinco rondas, ver el historial, recargar, salir e ingresar de nuevo. La segunda cuenta no debe ver el historial de la primera. Probar recuperación de contraseña y una ronda agotada. Las pruebas locales de SQL no sustituyen la configuración real de Auth, correo, Google y red.
+8. Validar en el proyecto real: crear dos cuentas, jugar cinco rondas, ver el historial, recargar, salir e ingresar de nuevo. La segunda cuenta no debe ver el historial de la primera. Verificar que no se puede jugar sin Google y probar una ronda agotada. Las pruebas locales de SQL no sustituyen la configuración real de Auth, correo, Google y red.
 
 No enviar claves privadas por chat ni guardarlas en Git. Este entorno necesita las variables públicas también en sus propios ajustes si se quiere probar conectado a Supabase; Vercel no las inyecta acá.
 
 ## Ingreso con Google
 
-El formulario de ingreso y registro incluye **Continuar con Google**. Supabase crea la cuenta en el primer ingreso y administra la sesión y el perfil como en el flujo por correo. No hace falta una nueva migración para habilitar este botón.
+El único acceso al juego es **Continuar con Google**. Supabase crea la cuenta en el primer ingreso y administra la sesión y el perfil. La migración 008 aplica el requisito también a las funciones SQL de juego.
 
 En Google Cloud crear un cliente OAuth de tipo Aplicación web. En **URIs de redireccionamiento autorizados** agregar exactamente `https://TU_PROJECT_REF.supabase.co/auth/v1/callback`, sin barra final; copiar la URL que muestra Supabase. En Supabase → Authentication → Providers → Google habilitar el proveedor y guardar el Client ID y el Client Secret de OAuth. El secreto va solo en Supabase; no es la clave de Google Maps ni una variable del frontend. Configurar la pantalla de consentimiento de Google; si la aplicación está en modo Testing, agregar los usuarios de prueba autorizados.
 

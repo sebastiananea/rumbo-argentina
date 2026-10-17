@@ -1,42 +1,31 @@
+import {isGoogleSession} from './google-session';
+import {FriendRooms} from './rooms';
 import {GameMusic} from './music';
 import {bootstrapApplication} from '@angular/platform-browser';
 import {Component,OnDestroy,NgZone,ChangeDetectorRef,signal} from '@angular/core';
 import * as L from 'leaflet';
-import {Game,Point,demoDailyRounds} from './game';
+import {Game,Point} from './game';
 import {findNavigablePanorama,navigableLocation} from './street-view';
 import {Backend,type DailyChallenge,type DailyLeaderboard,type DailyLocation,type GameHistory} from './backend';
 import type {User} from '@supabase/supabase-js';
 import {GOOGLE_MAPS_API_KEY} from './google-maps-config';
-@Component({selector:'app-root',standalone:true,template:`
-<header><a class="brand" href="/">◈ <span>rumbo<span class="dot">.</span></span></a><span class="country">ARGENTINA <span>🇦🇷</span></span>@if(backend.client && (!started() || game.finished)){<div class="account-actions">@if(user()){<span>{{displayName()}}</span><button class="quiet" (click)="signOut()" [disabled]="authBusy()||catalogChecking()">Salir de mi cuenta</button>}@else{<button class="quiet" (click)="openAccount('login')">Ingresar</button><button (click)="openAccount('signup')">Crear cuenta</button>}</div>}<button type="button" class="theme-toggle quiet" (click)="toggleTheme()" [attr.aria-pressed]="darkMode()" [attr.aria-label]="darkMode()?'Activar modo claro':'Activar modo oscuro'"><span aria-hidden="true">{{darkMode()?'☀':'☾'}}</span><span>{{darkMode()?'Claro':'Oscuro'}}</span></button></header>
+@Component({selector:'app-root',standalone:true,imports:[FriendRooms],template:`
+<header><a class="brand" href="/">◈ <span>rumbo<span class="dot">.</span></span></a><span class="country">ARGENTINA <span>🇦🇷</span></span>@if(backend.client && (!started() || game.finished)){<div class="account-actions">@if(user()){<span>{{displayName()}}</span><button class="quiet" (click)="signOut()" [disabled]="authBusy()||catalogChecking()">Salir de mi cuenta</button>}@else{<button (click)="signInWithGoogle()" [disabled]="authBusy()">Ingresar con Google</button>}</div>}<button type="button" class="theme-toggle quiet" (click)="toggleTheme()" [attr.aria-pressed]="darkMode()" [attr.aria-label]="darkMode()?'Activar modo claro':'Activar modo oscuro'"><span aria-hidden="true">{{darkMode()?'☀':'☾'}}</span><span>{{darkMode()?'Claro':'Oscuro'}}</span></button></header>
 <main [class.playing]="playing()">
-@if(accountOpen()){
-<section class="account-panel" aria-labelledby="account-title"><button class="quiet account-close" (click)="accountOpen.set(false)" aria-label="Cerrar formulario">✕</button>
-<h2 id="account-title">{{authMode()==='signup'?'Creá tu cuenta':authMode()==='reset'?'Recuperá tu contraseña':authMode()==='recover'?'Elegí una nueva contraseña':'Ingresá a tu cuenta'}}</h2>
-@if(authMode()==='login'||authMode()==='signup'){
-<button class="google-signin" type="button" (click)="signInWithGoogle()" [disabled]="authBusy()"><span aria-hidden="true" class="google-mark">G</span>{{authBusy()?'Conectando…':'Continuar con Google'}}</button><div class="auth-divider"><span>o con tu correo</span></div>
-}
-<form (submit)="authenticate($event)">
-@if(authMode()==='signup'){<label>Nombre<input name="display_name" autocomplete="nickname" required maxlength="50" [value]="authName()" (input)="authName.set(inputValue($event))"></label>}
-@if(authMode()!=='recover'){<label>Correo electrónico<input name="email" type="email" autocomplete="email" required [value]="authEmail()" (input)="authEmail.set(inputValue($event))"></label>}
-@if(authMode()!=='reset'){<label>Contraseña<input name="password" type="password" [autocomplete]="authMode()==='login'?'current-password':'new-password'" required [minLength]="authMode()==='login'?1:8" [value]="authPassword()" (input)="authPassword.set(inputValue($event))"></label>}
-<button type="submit" [disabled]="authBusy()">{{authBusy()?'Procesando…':authMode()==='signup'?'Crear cuenta':authMode()==='reset'?'Enviar enlace':authMode()==='recover'?'Guardar contraseña':'Ingresar'}}</button>
-</form>
-@if(authMessage()){<p role="status">{{authMessage()}}</p>}
-@if(authMode()==='login'){<button class="quiet" (click)="openAccount('reset')">Olvidé mi contraseña</button>}
-</section>
-}
+@if(accountOpen()){<section class="account-panel"><button class="quiet account-close" (click)="accountOpen.set(false)" aria-label="Cerrar formulario">✕</button><h2>Ingresá para jugar</h2><p>Tu cuenta de Google guarda tus partidas y te permite jugar con amigos.</p><button class="google-signin" (click)="signInWithGoogle()" [disabled]="authBusy()||!backend.client">Continuar con Google</button>@if(authMessage()){<p role="status">{{authMessage()}}</p>}</section>}
 @if(accountError()){<p class="error" role="alert">{{accountError()}}</p>}
 @if(!started()){
-@if(user()){<section class="player-heading"><p class="eyebrow">TU PANEL</p><h1>Tu desafío, tu marca.</h1><p>Hola, {{displayName()}}. Mirá los puntajes a superar y encontrá tu rumbo.</p></section>}@else{<div class="landing-copy"><p class="eyebrow">UN PAÍS. UN NUEVO DESAFÍO CADA DÍA.</p><h1 id="home-title">Argentina te espera.<br>Encontrá tu rumbo.</h1><p class="home-description">Cinco lugares, miles de pistas. Explorá calles y caminos de nuestro país y descubrí dónde estás.</p><div class="landing-steps"><p><span>01</span> Explorá el lugar en Street View.</p><p><span>02</span> Marcá tu ubicación en el mapa.</p><p><span>03</span> Descubrí qué tan cerca estuviste.</p></div></div>}
+@if(!roomActive()){
+
+@if(googleUser()){<section class="player-heading"><p class="eyebrow">TU PANEL</p><h1>Tu desafío, tu marca.</h1><p>Hola, {{displayName()}}. Mirá los puntajes a superar y encontrá tu rumbo.</p></section>}@else{<div class="landing-copy"><p class="eyebrow">UN PAÍS. UN NUEVO DESAFÍO CADA DÍA.</p><h1 id="home-title">Argentina te espera.<br>Encontrá tu rumbo.</h1><p class="home-description">Cinco lugares, miles de pistas. Explorá calles y caminos de nuestro país y descubrí dónde estás.</p><div class="landing-steps"><p><span>01</span> Explorá el lugar en Street View.</p><p><span>02</span> Marcá tu ubicación en el mapa.</p><p><span>03</span> Descubrí qué tan cerca estuviste.</p></div></div>}
 <div class="home-dashboard" [class.signed-in]="!!user()"><section class="home daily-landing" aria-label="Tu desafío de hoy"><div class="daily-card"><div class="home-compass" aria-hidden="true">◈</div><p class="eyebrow">DESAFÍO DIARIO</p><h2>{{formatDay(daily()?.day??argentinaDay())}}</h2>@if(!completedDaily()){<p>Las mismas cinco ubicaciones para todos.<br>Un intento para encontrar tu rumbo.</p><div class="home-rules"><span>5 rondas</span><span>2 minutos por ronda</span><span>25.000 puntos</span></div>}
-@if(completedDaily()){<p class="completed-badge">✓ Desafío completado</p><p class="daily-score">{{completedDaily()!.total.toLocaleString('es-AR')}} <span>/ 25.000 puntos</span></p>@if(leaderboard()?.me;as me){<p class="personal-position">Puesto <strong>#{{me.position}}</strong> de {{leaderboard()!.completed}} · ranking de hoy</p>}<button class="start" (click)="reviewDaily()">Ver mi puntaje →</button>}
+@if(googleUser()&&completedDaily()){<p class="completed-badge">✓ Desafío completado</p><p class="daily-score">{{completedDaily()!.total.toLocaleString('es-AR')}} <span>/ 25.000 puntos</span></p>@if(leaderboard()?.me;as me){<p class="personal-position">Puesto <strong>#{{me.position}}</strong> de {{leaderboard()!.completed}} · ranking de hoy</p>}<button class="start" (click)="reviewDaily()">Ver mi puntaje →</button>}
 @else if(dailyAttempt()?.status==='abandoned'){<p class="daily-message">Ya utilizaste tu intento de hoy.</p>}
-@else{<button class="start" (click)="begin()" [disabled]="busy()||dailyLoading()||attemptLoading()||authBusy()||(!!backend.client&&!daily())|| (!!user()&&!!attemptError())">{{busy()||dailyLoading()||attemptLoading()?'Preparando desafío…':dailyAttempt()?.status==='playing'?'Continuar desafío →':'Jugar desafío →'}}</button>}
+@else{<button class="start" (click)="googleUser()?begin():openAccount()" [disabled]="busy()||dailyLoading()||attemptLoading()||authBusy()||(!!backend.client&&!daily())|| (!!user()&&!!attemptError())">{{busy()||dailyLoading()||attemptLoading()?'Preparando desafío…':!googleUser()?'Ingresar con Google para jugar':dailyAttempt()?.status==='playing'?'Continuar desafío →':'Jugar desafío →'}}</button>}
 @if(attemptError()){<p role="status" class="daily-message">{{attemptError()}}</p><button class="quiet" (click)="refreshAttempt()">Volver a consultar mi intento</button>}
 @if(dailyMessage()){<p role="status" class="daily-message">{{dailyMessage()}}</p><button class="quiet" (click)="refreshDaily()" [disabled]="dailyLoading()">Volver a consultar</button>}
 @if(daily()&&daily()!.sourceDay!==daily()!.day){<p class="guest-note">Hoy mantenemos el último desafío disponible.</p>}
-<p class="home-note">@if(!completedDaily()){Si se agota el tiempo, la ronda suma 0 puntos.<br>}Nuevo desafío a medianoche de Argentina.</p>@if(!user()){<p class="guest-note">Tu resultado de invitado queda en este navegador. Ingresá para guardarlo en tu cuenta.</p>}@if(!backend.client){<p class="guest-note">Modo de prueba local</p>}</div></section>
+<p class="home-note">@if(!completedDaily()){Si se agota el tiempo, la ronda suma 0 puntos.<br>}Nuevo desafío a medianoche de Argentina.</p>@if(!user()){<p class="guest-note">Para jugar es obligatorio ingresar con Google.</p>}@if(!backend.client){<p class="guest-note">Modo de prueba local</p>}</div></section>
 @if(backend.client){<section class="leaderboard" aria-labelledby="leaderboard-title"><div class="section-heading"><div><p class="eyebrow">DESAFÍO DIARIO · {{formatDay(leaderboard()?.day??daily()?.day??argentinaDay())}}</p><h2 id="leaderboard-title">Los 5 mejores del día</h2></div><button class="quiet" (click)="refreshLeaderboard()" [disabled]="leaderboardLoading()" aria-label="Actualizar ranking">{{leaderboardLoading()?'Actualizando…':'Actualizar'}}</button></div>
 @if(leaderboardError()){<p role="status">{{leaderboardError()}}</p>}
 @else if(!leaderboard()&&leaderboardLoading()){<p role="status">Cargando puntajes…</p>}
@@ -56,24 +45,29 @@ import {GOOGLE_MAPS_API_KEY} from './google-maps-config';
 @if(catalogAdmin()){
 <section class="catalog-panel"><h2>Administrar catálogo</h2><p>Revisá lotes de 10 candidatos. Solo los puntos con Street View navegable entran al sorteo. Esta revisión consulta Google Maps.</p><button (click)="validateCatalog()" [disabled]="catalogChecking()">{{catalogChecking()?'Validando…':'Validar 10 ubicaciones'}}</button>@if(catalogMessage()){<p role="status">{{catalogMessage()}}</p>}</section>
 }
+}
+@if(googleUser()){<app-friend-rooms [backend]="backend" (activeChange)="roomActive.set($event)"/>}
 }@else{
 @if(finalResults()){
-<section class="final-result" aria-labelledby="final-title"><p class="eyebrow">DESAFÍO COMPLETADO · {{gameDay()?formatDay(gameDay()!):''}}</p><h1 id="final-title" tabindex="-1">Tu recorrido por Argentina.</h1><p class="final-score">{{game.total.toLocaleString('es-AR')}}<span>/ 25.000 puntos</span></p><p>Completaste las cinco ubicaciones del desafío.</p>@if(user()&&leaderboard()?.day===gameDay()&&leaderboard()?.me;as me){<p class="personal-position">Tu posición de hoy: <strong>#{{me.position}}</strong> de {{leaderboard()!.completed}}</p>}<div class="score-track" aria-hidden="true"><span [style.width.%]="game.total/250"></span></div>@if(backendGameId){<p class="saved-game">✓ Partida guardada en tu historial.</p>}@else{<p class="guest-note">Partida de invitado: no se guarda en tu historial.</p>}<div class="recap">@for(r of game.results;track $index){<div class="recap-row"><span class="round-number">{{$index+1}}</span><div><strong>{{r.name}}</strong><small>{{r.timedOut?'Tiempo agotado':formatDistance(r.distance)+' del punto de inicio'}}</small></div><strong>{{r.points.toLocaleString('es-AR')}} <small>pts</small></strong></div>}</div><div class="result-actions"><button class="quiet" (click)="goHome()">Volver al inicio</button></div><p class="guest-note">Ya completaste tu intento. Volvé mañana para un nuevo desafío.</p></section>
+<section class="final-result" aria-labelledby="final-title"><p class="eyebrow">DESAFÍO COMPLETADO · {{gameDay()?formatDay(gameDay()!):''}}</p><h1 id="final-title" tabindex="-1">Tu recorrido por Argentina.</h1><p class="final-score">{{game.total.toLocaleString('es-AR')}}<span>/ 25.000 puntos</span></p><p>Completaste las cinco ubicaciones del desafío.</p>@if(user()&&leaderboard()?.day===gameDay()&&leaderboard()?.me;as me){<p class="personal-position">Tu posición de hoy: <strong>#{{me.position}}</strong> de {{leaderboard()!.completed}}</p>}<div class="score-track" aria-hidden="true"><span [style.width.%]="game.total/250"></span></div>@if(backendGameId){<p class="saved-game">✓ Partida guardada en tu historial.</p>}<div class="recap">@for(r of game.results;track $index){<div class="recap-row"><span class="round-number">{{$index+1}}</span><div><strong>{{r.name}}</strong><small>{{r.timedOut?'Tiempo agotado':formatDistance(r.distance)+' del punto de inicio'}}</small></div><strong>{{r.points.toLocaleString('es-AR')}} <small>pts</small></strong></div>}</div><div class="result-actions"><button class="quiet" (click)="goHome()">Volver al inicio</button></div><p class="guest-note">Ya completaste tu intento. Volvé mañana para un nuevo desafío.</p></section>
 }
 
 @if(error()){<div class="error" role="alert">{{error()}}@if(roundSaveFailed()){<button (click)="submit()" [disabled]="submitting()">Reintentar guardar ronda</button>}</div>}
 @if(game.revealed&&!finalResults()){<section class="round-result" aria-labelledby="round-result-title"><p class="eyebrow">RONDA {{game.index+1}} DE 5 · {{game.results[game.index].timedOut?'TIEMPO AGOTADO':'UBICACIÓN CONFIRMADA'}}</p><h1 id="round-result-title" tabindex="-1">{{game.results[game.index].name}}</h1><p class="round-score">+{{game.results[game.index].points.toLocaleString('es-AR')}}<span>puntos de esta ronda / 5.000</span></p><p>@if(game.results[game.index].timedOut){Se terminaron los 2 minutos. Esta ronda suma 0 puntos.}@else{Tu apuesta quedó a <strong>{{formatDistance(game.results[game.index].distance)}}</strong> del punto de inicio.}</p><p class="result-total">Acumulado: {{game.total.toLocaleString('es-AR')}} / 25.000 puntos</p><button (click)="game.finished?showFinalResults():next()">{{game.finished?'Ver resultado final →':'Siguiente ronda →'}}</button>@if(!game.finished){<button class="quiet" (click)="goHome()">Continuar más tarde</button>}</section>}
 @if(!finalResults()){
-<div class="workspace" [class.round-revealed]="game.revealed" [hidden]="finalResults()"><div class="gamehud"><div class="round-info"><strong>Ronda {{game.index+1}} / 5</strong><small>{{game.total.toLocaleString('es-AR')}} puntos</small></div><span class="timer" [class.urgent]="remaining()<=20 && !game.revealed" role="timer" aria-label="Tiempo restante">{{busy() ? '…' : timeLabel()}}</span><button class="music-toggle hud-icon" (click)="toggleMusic()" [attr.aria-pressed]="!musicMuted()" [attr.aria-label]="musicMuted()?'Activar música':'Silenciar música'" [title]="musicMuted()?'Activar música':'Silenciar música'"><span aria-hidden="true">{{musicMuted()?'♪̸':'♫'}}</span></button><button class="hud-icon" (click)="goHome()" aria-label="Volver al inicio" title="Volver al inicio"><span aria-hidden="true">✕</span></button></div><section class="explore"><div class="panelbar"><span class="live">● {{connected()?'STREET VIEW':busy()?'CARGANDO STREET VIEW':'STREET VIEW NO DISPONIBLE'}}</span><span>Single player</span></div><div class="viewer" id="panorama" [class.inactive]="!connected()"></div>
+<div class="workspace" [class.round-revealed]="game.revealed" [hidden]="finalResults()"><div class="gamehud"><div class="round-info"><strong>Ronda {{game.index+1}} / 5</strong><small>{{game.total.toLocaleString('es-AR')}} puntos</small></div><span class="timer" [class.urgent]="remaining()<=15 && remaining()>0 && !game.revealed" role="timer" aria-label="Tiempo restante">{{busy() ? '…' : timeLabel()}}</span><button class="music-toggle hud-icon" (click)="toggleMusic()" [attr.aria-pressed]="!musicMuted()" [attr.aria-label]="musicMuted()?'Activar música':'Silenciar música'" [title]="musicMuted()?'Activar música':'Silenciar música'"><span aria-hidden="true">{{musicMuted()?'♪̸':'♫'}}</span></button><button class="hud-icon" (click)="goHome()" aria-label="Volver al inicio" title="Volver al inicio"><span aria-hidden="true">✕</span></button></div><section class="explore"><div class="panelbar"><span class="live">● {{connected()?'STREET VIEW':busy()?'CARGANDO STREET VIEW':'STREET VIEW NO DISPONIBLE'}}</span><span>Single player</span></div><div class="viewer" id="panorama" [class.inactive]="!connected()"></div>
 @if(!connected()){<div class="practice"><span class="compass">◈</span><p class="eyebrow">EXPLORÁ ARGENTINA</p><h2>Street View no está disponible</h2><p>Se necesita una conexión válida con Google Maps para jugar.</p><button (click)="begin()" [disabled]="busy()">Reintentar</button><button class="quiet" (click)="goHome()">Volver al inicio</button></div>}
 @if(busy()){<div class="loading" role="status">Buscando un panorama…</div>}
 <div class="viewfooter"><span>{{game.revealed?game.rounds[game.index].name:'Buscá pistas a tu alrededor'}}</span><button class="quiet" (click)="resetView()" [disabled]="!connected()||busy()">↺ Volver al punto inicial</button></div></section>
-<section id="guess-panel" class="mapcard" [class.expanded]="mapExpanded() || game.revealed" (mouseenter)="hoverMap(true)" (mouseleave)="hoverMap(false)"><div class="panelbar"><strong>{{game.revealed?'Tu apuesta y la ubicación real':'Tu apuesta'}} <span [hidden]="game.revealed" class="map-timer" [class.urgent]="remaining()<=20 && !game.revealed">{{busy() ? 'Cargando…' : timeLabel()}}</span></strong><button [hidden]="game.revealed" class="maptoggle quiet" (click)="toggleMap()" [attr.aria-expanded]="mapExpanded()" [attr.aria-label]="mapExpanded()?'Cerrar mapa':'Ampliar mapa'">{{mapExpanded()?'Cerrar mapa ✕':'Ampliar ↗'}}</button></div><div id="map" tabindex="0" aria-label="Mapa para elegir una ubicación"></div><div class="mapfooter" [hidden]="game.revealed"><p>{{game.guess?'Ubicación marcada. Podés moverla antes de apostar.':'Elegí dónde creés que estás.'}}</p><button class="primary" (click)="submit()" [disabled]="!game.guess||!game.target||game.revealed||busy()||submitting()">{{submitting()?'Guardando…':'Confirmar ubicación →'}}</button></div></section>@if(!game.revealed){<button class="mobile-map-launcher" [disabled]="busy()||!connected()" [hidden]="mapExpanded()" (click)="toggleMap()" aria-controls="guess-panel" [attr.aria-expanded]="mapExpanded()"><span aria-hidden="true">⌖</span> {{game.guess?'Revisar mi ubicación':'Elegir ubicación'}} <span aria-hidden="true">↑</span></button>}</div>
+<section id="guess-panel" class="mapcard" [class.expanded]="mapExpanded() || game.revealed" (mouseenter)="hoverMap(true)" (mouseleave)="hoverMap(false)"><div class="panelbar"><strong>{{game.revealed?'Tu apuesta y la ubicación real':'Tu apuesta'}} <span [hidden]="game.revealed" class="map-timer" [class.urgent]="remaining()<=15 && remaining()>0 && !game.revealed">{{busy() ? 'Cargando…' : timeLabel()}}</span></strong><button [hidden]="game.revealed" class="maptoggle quiet" (click)="toggleMap()" [attr.aria-expanded]="mapExpanded()" [attr.aria-label]="mapExpanded()?'Cerrar mapa':'Ampliar mapa'">{{mapExpanded()?'Cerrar mapa ✕':'Ampliar ↗'}}</button></div><div id="map" tabindex="0" aria-label="Mapa para elegir una ubicación"></div><div class="mapfooter" [hidden]="game.revealed"><p>{{game.guess?'Ubicación marcada. Podés moverla antes de apostar.':'Elegí dónde creés que estás.'}}</p><button class="primary" (click)="submit()" [disabled]="!game.guess||!game.target||game.revealed||busy()||submitting()">{{submitting()?'Guardando…':'Confirmar ubicación →'}}</button></div></section>@if(!game.revealed){<button class="mobile-map-launcher" [disabled]="busy()||!connected()" [hidden]="mapExpanded()" (click)="toggleMap()" aria-controls="guess-panel" [attr.aria-expanded]="mapExpanded()"><span aria-hidden="true">⌖</span> {{game.guess?'Revisar mi ubicación':'Elegir ubicación'}} <span aria-hidden="true">↑</span></button>}</div>
 }
 @if(game.revealed&&!finalResults()){<p class="map-legend"><span>● Tu apuesta</span><span>● Ubicación real</span></p>}
 }
 <footer><span>De la Puna a la Patagonia.</span><span>5 rondas · 2 minutos por ronda</span></footer></main>`})
 class App implements OnDestroy {
+ roomActive=signal(false);
+ private googleSession=signal(false);
+ googleUser(){return this.googleSession();}
  private readonly music=new GameMusic();
  musicMuted=signal(this.music.muted);
  toggleMusic(){this.music.toggle();this.musicMuted.set(this.music.muted);}
@@ -87,7 +81,7 @@ class App implements OnDestroy {
  toggleTheme(){const dark=!this.darkMode();this.themePreference=dark?'dark':'light';this.applyTheme(dark);try{localStorage.setItem('rumbo-theme',this.themePreference);}catch{}}
  readonly backend=new Backend();
  user=signal<User|null>(null);displayName=signal('Jugador');historyItems=signal<GameHistory[]>([]);historyLoading=signal(false);
- accountOpen=signal(false);authMode=signal<'login'|'signup'|'reset'|'recover'>('login');authName=signal('');authEmail=signal('');authPassword=signal('');authMessage=signal('');authBusy=signal(false);accountError=signal('');
+ accountOpen=signal(false);authMessage=signal('');authBusy=signal(false);accountError=signal('');
  catalogAdmin=signal(false);catalogChecking=signal(false);catalogMessage=signal('');submitting=signal(false);roundSaveFailed=signal(false);
  leaderboard=signal<DailyLeaderboard|null>(null);leaderboardLoading=signal(false);leaderboardError=signal('');private leaderboardRequest=0;
  dailyAttempt=signal<GameHistory|null>(null);attemptLoading=signal(false);attemptError=signal('');private attemptEpoch=0;
@@ -107,49 +101,26 @@ class App implements OnDestroy {
  private async initializeAuth(){
   const client=this.backend.client;if(!client)return;
   const {data}=client.auth.onAuthStateChange((event,session)=>{
-   this.user.set(session?.user??null);this.historyItems.set([]);this.catalogAdmin.set(false);this.accountEpoch++;this.dailyAttempt.set(null);this.attemptEpoch++;this.attemptLoading.set(!!session?.user);
+   this.user.set(session?.user??null);this.googleSession.set(isGoogleSession(session));this.historyItems.set([]);this.catalogAdmin.set(false);this.accountEpoch++;this.dailyAttempt.set(null);this.attemptEpoch++;this.attemptLoading.set(!!session?.user);
    void this.refreshAttempt();
-   if(event==='PASSWORD_RECOVERY'){this.authMode.set('recover');this.accountOpen.set(true);}
+   if(session?.user&&!this.googleUser())this.authMessage.set('Volvé a ingresar con Google para jugar.');if(!session?.user&&this.started())this.goHome();
    setTimeout(()=>{if(session?.user)void this.refreshAccount();void this.refreshLeaderboard();},0);
   });
   this.authSubscription=data.subscription;
   const {data:session,error}=await client.auth.getSession();
   if(error)this.accountError.set('No se pudo recuperar tu sesión. Volvé a ingresar.');
-  else this.user.set(session.session?.user??null);
+  else{this.user.set(session.session?.user??null);this.googleSession.set(isGoogleSession(session.session));}
   await this.refreshAttempt();
  }
- inputValue(event:Event){return (event.target as HTMLInputElement).value;}
- openAccount(mode:'login'|'signup'|'reset'){this.authMode.set(mode);this.authPassword.set('');this.authMessage.set('');this.accountOpen.set(true);}
+ openAccount(){this.authMessage.set('');this.accountOpen.set(true);}
  async signInWithGoogle(){
   const client=this.backend.client;if(!client||this.authBusy())return;
-  this.authBusy.set(true);this.authMessage.set('');this.authPassword.set('');
+  this.authBusy.set(true);this.authMessage.set('');
   try{
    const {error}=await client.auth.signInWithOAuth({provider:'google',options:{redirectTo:window.location.origin+'/'}});
    if(error)throw error;
-  }catch{this.authMessage.set('No se pudo iniciar sesión con Google. Volvé a intentar.');}
+  }catch{this.accountOpen.set(true);this.authMessage.set('No se pudo iniciar sesión con Google. Volvé a intentar.');}
   finally{this.authBusy.set(false);}
- }
- async authenticate(event:Event){
-  event.preventDefault();if(this.authBusy()||!this.backend.client)return;
-  const client=this.backend.client;this.authBusy.set(true);this.authMessage.set('');
-  try{
-   const email=this.authEmail().trim(),password=this.authPassword();
-   if(this.authMode()==='signup'){
-    const {data,error}=await client.auth.signUp({email,password,options:{data:{display_name:this.authName().trim()},emailRedirectTo:window.location.origin+'/'}});
-    if(error)throw error;
-    if(data.session)this.accountOpen.set(false);else this.authMessage.set('Revisá tu correo para confirmar la cuenta.');
-   }else if(this.authMode()==='reset'){
-    const {error}=await client.auth.resetPasswordForEmail(email,{redirectTo:window.location.origin+'/'});if(error)throw error;
-    this.authMessage.set('Si existe una cuenta con ese correo, recibirás un enlace para recuperar la contraseña.');
-   }else if(this.authMode()==='recover'){
-    const {error}=await client.auth.updateUser({password});if(error)throw error;
-    this.authMessage.set('Contraseña actualizada. Ya podés jugar.');
-   }else{
-    const {error}=await client.auth.signInWithPassword({email,password});if(error)throw error;
-    this.accountOpen.set(false);
-   }
-  }catch{this.authMessage.set('No se pudo completar la operación. Revisá los datos y volvé a intentar.');}
-  finally{this.authPassword.set('');this.authBusy.set(false);}
  }
  async signOut(){
   if(!this.backend.client||this.authBusy()||this.catalogChecking())return;
@@ -209,13 +180,10 @@ class App implements OnDestroy {
   finally{if(request===this.leaderboardRequest)this.leaderboardLoading.set(false);}
  }
  completedDaily(){return this.dailyAttempt()?.status==='completed'?this.dailyAttempt():null;}
- private guestResult(day:string):GameHistory|null{
-  try{const value=JSON.parse(localStorage.getItem('rumbo-daily-result:'+day)??'null');return value?.daily_day===day&&value.status==='completed'&&value.game_rounds?.length===5?value:null;}catch{return null;}
- }
  async refreshAttempt(){
   const epoch=++this.attemptEpoch,day=this.daily()?.day??this.argentinaDay();
   this.attemptLoading.set(true);this.attemptError.set('');
-  try{const result=this.user()&&this.backend.client?await this.backend.dailyAttempt(day):this.guestResult(day);if(epoch===this.attemptEpoch)this.dailyAttempt.set(result);}
+  try{const result=this.googleUser()&&this.backend.client?await this.backend.dailyAttempt(day):null;if(epoch===this.attemptEpoch)this.dailyAttempt.set(result);}
   catch{if(epoch===this.attemptEpoch){this.dailyAttempt.set(null);this.attemptError.set('No pudimos consultar tu intento de hoy. Volvé a intentar.');}}
   finally{if(epoch===this.attemptEpoch)this.attemptLoading.set(false);}
  }
@@ -225,18 +193,12 @@ class App implements OnDestroy {
  }
  private async prepareGame(){
   await this.authInitialized;
-  if(!this.backend.client){const day=this.argentinaDay();this.game=new Game(demoDailyRounds(day));this.gameDay.set(day);return;}
-  if(this.user()){
-   if(this.backendGameId)return;
-   this.pendingGameRequest??=crypto.randomUUID();
-   const created=await this.backend.createGame(this.pendingGameRequest);
-   if(created.status!=='playing'||created.locations.length!==5)throw new Error('Partida no disponible');
-   this.game=new Game(created.locations);this.game.results=created.results??[];this.game.index=this.game.results.length;this.gameDay.set(created.day);this.backendGameId=created.id;
-  }else{
-   const challenge=await this.backend.daily();
-   if(!challenge||challenge.locations.length!==5)throw new Error('El desafío diario todavía se está preparando');
-   this.daily.set(challenge);this.game=new Game(challenge.locations);this.gameDay.set(challenge.day);
-  }
+  if(!this.backend.client||!this.googleUser())throw new Error('Ingresá con Google para jugar');
+  if(this.backendGameId)return;
+  this.pendingGameRequest??=crypto.randomUUID();
+  const created=await this.backend.createGame(this.pendingGameRequest);
+  if(created.status!=='playing'||created.locations.length!==5)throw new Error('Partida no disponible');
+  this.game=new Game(created.locations);this.game.results=created.results??[];this.game.index=this.game.results.length;this.gameDay.set(created.day);this.backendGameId=created.id;
  }
  goHome(){
   this.stopTimer();this.request++;this.disposeGameViews();this.started.set(false);this.leave();
@@ -253,6 +215,7 @@ class App implements OnDestroy {
  toggleMap(){this.mapExpanded.set(!this.mapExpanded());this.cdr.detectChanges();this.map?.invalidateSize({pan:false});if(this.mapExpanded())document.querySelector<HTMLButtonElement>('.maptoggle')?.focus({preventScroll:true});else document.querySelector<HTMLButtonElement>('.mobile-map-launcher')?.focus({preventScroll:true});}
  private initializeMap(){this.map=L.map('map').setView([-38.5,-64],4);L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',maxZoom:19}).addTo(this.map);this.pins.addTo(this.map);this.map.on('click',(e:L.LeafletMouseEvent)=>this.zone.run(()=>{if(this.game.revealed||this.busy()||this.submitting()||this.roundSaveFailed()||this.checkTime())return;this.game.guess={lat:e.latlng.lat,lng:e.latlng.lng};this.draw();this.cdr.markForCheck();}));this.game.target=null;this.resizeObserver=new ResizeObserver(()=>{this.map.invalidateSize({pan:false});if(this.game.revealed)this.draw();if(this.panorama)google.maps.event.trigger(this.panorama,'resize');});this.resizeObserver.observe(document.getElementById('map')!);this.resizeObserver.observe(document.getElementById('panorama')!);}
  begin(){
+  if(!this.googleUser()){this.openAccount();return;}
   if(this.busy()||this.authBusy()||this.catalogChecking()||this.game.revealed||this.attemptLoading()||this.completedDaily()||this.dailyAttempt()?.status==='abandoned'||(this.user()&&this.attemptError()))return;
   this.music.unlock();this.accountOpen.set(false);
   if(!this.started()){this.started.set(true);this.cdr.detectChanges();this.initializeMap();}
@@ -271,15 +234,14 @@ class App implements OnDestroy {
    if(this.remaining()===0&&!this.game.revealed&&!this.submitting()&&!this.roundSaveFailed()){this.stopTimer();void this.submit();}
    return this.game.revealed||this.remaining()===0;
   }
-  if(this.game.expire()){this.finishRound();return true;}
   return this.game.revealed;
  }
  private finishRound(){
   this.stopTimer();this.leave();this.panorama?.setVisible(false);
   if(this.game.finished){
-   const result:GameHistory={id:this.backendGameId??'guest',daily_day:this.gameDay(),status:'completed',total:this.game.total,created_at:new Date().toISOString(),game_rounds:this.game.results.map((r,index)=>({round_index:index,name:r.name,status:'completed',distance:r.distance,points:r.points,timed_out:r.timedOut}))};
+   const result:GameHistory={id:this.backendGameId!,daily_day:this.gameDay(),status:'completed',total:this.game.total,created_at:new Date().toISOString(),game_rounds:this.game.results.map((r,index)=>({round_index:index,name:r.name,status:'completed',distance:r.distance,points:r.points,timed_out:r.timedOut}))};
    this.dailyAttempt.set(result);
-   if(this.backendGameId){if(this.user())void this.refreshAccount();void this.refreshLeaderboard();}else{try{localStorage.setItem('rumbo-daily-result:'+this.gameDay(),JSON.stringify(result));}catch{}}
+   if(this.user())void this.refreshAccount();void this.refreshLeaderboard();
   }
   this.cdr.detectChanges();this.map.invalidateSize({pan:false});this.draw();this.focusResult('round-result-title');
  }
@@ -327,7 +289,7 @@ class App implements OnDestroy {
  draw(){this.pins.clearLayers();if(this.game.guess)L.circleMarker(this.game.guess,{radius:8,color:'#fff',weight:3,fillColor:'#126e72',fillOpacity:1}).bindTooltip('Tu apuesta').addTo(this.pins);if(this.game.revealed&&this.game.target){L.circleMarker(this.game.target,{radius:8,color:'#fff',weight:3,fillColor:'#ea9049',fillOpacity:1}).bindTooltip('Ubicación real').addTo(this.pins);if(this.game.guess){L.polyline([this.game.guess,this.game.target],{color:'#ea9049',dashArray:'7,7'}).addTo(this.pins);this.map.fitBounds(L.latLngBounds([this.game.guess,this.game.target]),{padding:[35,35],maxZoom:14});}else this.map.setView(this.game.target,12);}}
  async submit(){
   if(!this.connected()||this.busy()||this.submitting()||this.game.revealed)return;
-  if(!this.backendGameId){if(this.checkTime())return;this.game.submit();if(this.game.revealed)this.finishRound();return;}
+  if(!this.backendGameId)return;
   if(!this.game.guess&&this.game.remainingSeconds()>0)return;
   this.submitting.set(true);this.roundSaveFailed.set(false);this.error.set('');
   const id=this.request,index=this.game.index;

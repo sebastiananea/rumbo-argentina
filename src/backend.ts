@@ -1,3 +1,4 @@
+import type {RoomState} from './rooms';
 import {createClient, type SupabaseClient} from '@supabase/supabase-js';
 import type {Place, Point, RoundResult} from './game';
 import {SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY} from './google-maps-config';
@@ -23,6 +24,12 @@ export class Backend {
   if(error)throw new Error(error.message);
   return data as T;
  }
+ createRoom(){return this.rpc<RoomState>('create_room');}
+ joinRoom(code:string){return this.rpc<RoomState>('join_room',{p_code:code});}
+ roomState(id:string){return this.rpc<RoomState>('room_state',{p_room:id});}
+ advanceRoom(id:string,index:number){return this.rpc<RoomState>('advance_room',{p_room:id,p_index:index});}
+ submitRoom(id:string,index:number,point:Point){return this.rpc<RoomState>('submit_room_guess',{p_room:id,p_index:index,p_lat:point.lat,p_lng:point.lng});}
+ leaveRoom(id:string){return this.rpc<void>('leave_room',{p_room:id});}
  leaderboard(){return this.rpc<DailyLeaderboard>('get_daily_leaderboard');}
  daily(){return this.rpc<DailyChallenge|null>('get_daily_challenge');}
  createGame(requestId:string){return this.rpc<{id:string;status:string;day:string;results:RoundResult[];locations:DailyLocation[]}>('create_game',{p_request_id:requestId});}
